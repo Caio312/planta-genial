@@ -1,9 +1,18 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Download, Eye, Home, Ruler, FileText, Check } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowLeft, Download, Eye, FileText, Home, Users, Bath, Car, CheckCircle, Calculator, Box, Image } from "lucide-react";
+import { FloorPlanViewer } from "./FloorPlanViewer";
+import { MaterialQuantities } from "./MaterialQuantities";
 import { toast } from "sonner";
+
+interface FloorPlanSpecificationsProps {
+  data: FloorPlanData;
+  onBack: () => void;
+  onStartNew: () => void;
+}
 
 interface FloorPlanData {
   totalArea: number;
@@ -16,17 +25,33 @@ interface FloorPlanData {
   style: string;
 }
 
-interface FloorPlanSpecificationsProps {
-  data: FloorPlanData;
-  onBack: () => void;
-  onStartNew: () => void;
-}
-
 export const FloorPlanSpecifications = ({ data, onBack, onStartNew }: FloorPlanSpecificationsProps) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'technical' | 'materials'>('overview');
+  const [activeTab, setActiveTab] = useState("viewer");
+  
+  const getStyleName = (styleId: string) => {
+    const styles = {
+      "moderno_minimalista": "Moderno Minimalista",
+      "tradicional_brasileiro": "Tradicional Brasileiro", 
+      "contemporaneo_sustentavel": "Contemporâneo Sustentável"
+    };
+    return styles[styleId as keyof typeof styles] || styleId;
+  };
 
-  const handleExport = (format: string) => {
-    toast.success(`Iniciando download em formato ${format.toUpperCase()}`);
+  const handleExportPDF = () => {
+    toast.info("Gerando PDF... Esta funcionalidade será implementada em breve!");
+  };
+
+  const handleExportDWG = () => {
+    toast.info("Preparando arquivo DWG... Esta funcionalidade será implementada em breve!");
+  };
+
+  const handleGenerate3D = async () => {
+    toast.loading("Gerando visualização 3D com IA...");
+    
+    // Simulate 3D generation
+    setTimeout(() => {
+      toast.success("Visualização 3D gerada! Esta funcionalidade será aprimorada em breve.");
+    }, 3000);
   };
 
   const getRoomList = () => {
@@ -69,241 +94,173 @@ export const FloorPlanSpecifications = ({ data, onBack, onStartNew }: FloorPlanS
 
   return (
     <div className="min-h-screen bg-background py-12 px-6">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="text-center mb-12">
+          <div className="flex items-center justify-center mb-6">
+            <div className="w-16 h-16 bg-success rounded-2xl flex items-center justify-center">
+              <CheckCircle className="w-8 h-8 text-white" />
+            </div>
+          </div>
+          
+          <h1 className="text-4xl font-semibold text-foreground mb-4">
+            Planta Baixa Gerada com Sucesso!
+          </h1>
+          <p className="text-xl text-text-secondary">
+            Sua residência de {data.totalArea}m² foi projetada seguindo as melhores práticas arquitetônicas
+          </p>
+        </div>
+
+        {/* Main Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
+          <TabsList className="grid w-full grid-cols-3 mb-8">
+            <TabsTrigger value="viewer" className="flex items-center">
+              <Eye className="w-4 h-4 mr-2" />
+              Visualizar Planta
+            </TabsTrigger>
+            <TabsTrigger value="quantities" className="flex items-center">
+              <Calculator className="w-4 h-4 mr-2" />
+              Quantitativos
+            </TabsTrigger>
+            <TabsTrigger value="details" className="flex items-center">
+              <FileText className="w-4 h-4 mr-2" />
+              Especificações
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="viewer">
+            <FloorPlanViewer 
+              data={data}
+              onExportPDF={handleExportPDF}
+              onExportDWG={handleExportDWG}
+              onGenerate3D={handleGenerate3D}
+            />
+          </TabsContent>
+
+          <TabsContent value="quantities">
+            <MaterialQuantities data={data} />
+          </TabsContent>
+
+          <TabsContent value="details">
+            <div className="grid lg:grid-cols-3 gap-8">
+              {/* Main Content */}
+              <div className="lg:col-span-2 space-y-6">
+                <Card className="card-elevated">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Home className="w-5 h-5 text-primary" />
+                      Resumo do Projeto
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div>
+                        <h4 className="font-semibold text-foreground mb-3">Características Gerais</h4>
+                        <ul className="space-y-2 text-text-secondary">
+                          <li>• {data.bedrooms} quartos ({data.bedrooms === 3 ? '1 suíte master' : ''})</li>
+                          <li>• {data.bathrooms} banheiros</li>
+                          <li>• Área total: {totalCalculatedArea.toFixed(1)} m²</li>
+                          <li>• Terreno: {data.lotWidth}m × {data.lotDepth}m</li>
+                          <li>• Estilo: {getStyleName(data.style)}</li>
+                          {data.hasGarage && <li>• Garagem para 1 veículo</li>}
+                          {data.hasBalcony && <li>• Varanda/Terraço</li>}
+                        </ul>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-semibold text-foreground mb-3">Conformidade Técnica</h4>
+                        <div className="space-y-2">
+                          <Badge variant="secondary" className="bg-success-light text-success">
+                            ✓ NBR 9050 - Acessibilidade
+                          </Badge>
+                          <Badge variant="secondary" className="bg-success-light text-success">
+                            ✓ Código de Obras Municipal  
+                          </Badge>
+                          <Badge variant="secondary" className="bg-success-light text-success">
+                            ✓ Normas de Ventilação
+                          </Badge>
+                          <Badge variant="secondary" className="bg-success-light text-success">
+                            ✓ Iluminação Natural
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="card-elevated">
+                  <CardHeader>
+                    <CardTitle>Especificações de Janelas</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {[
+                        { room: "Sala de Estar", type: "Normal", width: "1.20m", height: "1.20m", sillHeight: "1.00m" },
+                        { room: "Quarto Master", type: "Normal", width: "1.00m", height: "1.20m", sillHeight: "1.00m" },
+                        { room: "Quarto 2", type: "Normal", width: "1.00m", height: "1.20m", sillHeight: "1.00m" },
+                        { room: "Cozinha", type: "Basculante", width: "0.60m", height: "0.60m", sillHeight: "1.60m" },
+                        { room: "Banheiro Social", type: "Basculante", width: "0.60m", height: "0.60m", sillHeight: "1.60m" }
+                      ].map((window, index) => (
+                        <div key={index} className="flex items-center justify-between p-4 bg-surface rounded-xl">
+                          <div>
+                            <div className="font-medium text-foreground">{window.room}</div>
+                            <div className="text-sm text-text-secondary">Tipo: {window.type}</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-medium">{window.width} × {window.height}</div>
+                            <div className="text-sm text-text-secondary">Peitoril: {window.sillHeight}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Sidebar */}
+              <div className="space-y-6">
+                {/* Room List */}
+                <Card className="card-elevated">
+                  <CardHeader>
+                    <CardTitle>Ambientes</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {rooms.map((room, index) => (
+                        <div key={index} className="flex justify-between items-center py-2 border-b border-border-subtle last:border-0">
+                          <span className="text-sm font-medium text-foreground">{room.name}</span>
+                          <span className="text-sm text-text-secondary">{room.area} m²</span>
+                        </div>
+                      ))}
+                      <div className="pt-3 border-t border-border flex justify-between items-center font-semibold">
+                        <span>Total</span>
+                        <span className="text-primary">{totalCalculatedArea.toFixed(1)} m²</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+
+        {/* Navigation */}
+        <div className="flex justify-between">
           <Button 
             onClick={onBack}
             variant="ghost" 
             className="btn-ghost"
           >
             <ArrowLeft className="mr-2 w-4 h-4" />
-            Voltar
+            Voltar e Ajustar
           </Button>
           
-          <div className="flex gap-3">
-            <Button onClick={() => handleExport('pdf')} variant="outline" className="btn-secondary">
-              <Download className="mr-2 w-4 h-4" />
-              PDF
-            </Button>
-            <Button onClick={() => handleExport('dwg')} className="btn-primary">
-              <Download className="mr-2 w-4 h-4" />
-              DWG
-            </Button>
-          </div>
-        </div>
-
-        {/* Success Banner */}
-        <div className="card-glass p-6 mb-8 border-l-4 border-l-success">
-          <div className="flex items-center">
-            <div className="flex items-center justify-center w-10 h-10 bg-success-light rounded-full mr-4">
-              <Check className="w-5 h-5 text-success" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-foreground mb-1">
-                Planta Baixa Gerada com Sucesso!
-              </h2>
-              <p className="text-text-secondary">
-                Sua planta baixa técnica está pronta para download e uso profissional
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Tabs */}
-            <div className="flex space-x-1 bg-surface rounded-xl p-1">
-              {[
-                { id: 'overview', label: 'Visão Geral', icon: Eye },
-                { id: 'technical', label: 'Especificações', icon: Ruler },
-                { id: 'materials', label: 'Materiais', icon: FileText }
-              ].map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
-                    className={`
-                      flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all duration-200
-                      ${activeTab === tab.id 
-                        ? 'bg-background text-primary shadow-sm' 
-                        : 'text-text-secondary hover:text-foreground'
-                      }
-                    `}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Tab Content */}
-            {activeTab === 'overview' && (
-              <Card className="card-elevated">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Home className="w-5 h-5 text-primary" />
-                    Resumo do Projeto
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div>
-                      <h4 className="font-semibold text-foreground mb-3">Características Gerais</h4>
-                      <ul className="space-y-2 text-text-secondary">
-                        <li>• {data.bedrooms} quartos ({data.bedrooms === 3 ? '1 suíte master' : ''})</li>
-                        <li>• {data.bathrooms} banheiros</li>
-                        <li>• Área total: {totalCalculatedArea.toFixed(1)} m²</li>
-                        <li>• Terreno: {data.lotWidth}m × {data.lotDepth}m</li>
-                        {data.hasGarage && <li>• Garagem para 1 veículo</li>}
-                        {data.hasBalcony && <li>• Varanda/Terraço</li>}
-                      </ul>
-                    </div>
-                    
-                    <div>
-                      <h4 className="font-semibold text-foreground mb-3">Conformidade Técnica</h4>
-                      <div className="space-y-2">
-                        <Badge variant="secondary" className="bg-success-light text-success">
-                          ✓ NBR 9050 - Acessibilidade
-                        </Badge>
-                        <Badge variant="secondary" className="bg-success-light text-success">
-                          ✓ Código de Obras Municipal  
-                        </Badge>
-                        <Badge variant="secondary" className="bg-success-light text-success">
-                          ✓ Normas de Ventilação
-                        </Badge>
-                        <Badge variant="secondary" className="bg-success-light text-success">
-                          ✓ Iluminação Natural
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {activeTab === 'technical' && (
-              <Card className="card-elevated">
-                <CardHeader>
-                  <CardTitle>Especificações Técnicas</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    <div>
-                      <h4 className="font-semibold text-foreground mb-3">Elementos Estruturais</h4>
-                      <div className="grid md:grid-cols-2 gap-4 text-sm">
-                        <div className="bg-surface p-4 rounded-lg">
-                          <strong>Paredes Externas:</strong> 20cm (concreto armado)
-                        </div>
-                        <div className="bg-surface p-4 rounded-lg">
-                          <strong>Paredes Internas:</strong> 15cm (alvenaria estrutural)
-                        </div>
-                        <div className="bg-surface p-4 rounded-lg">
-                          <strong>Fundação:</strong> Radier (concreto armado)
-                        </div>
-                        <div className="bg-surface p-4 rounded-lg">
-                          <strong>Cobertura:</strong> Laje + Telhado cerâmico
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4 className="font-semibold text-foreground mb-3">Aberturas Padrão</h4>
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center py-2 border-b border-border-subtle">
-                          <span>Porta Principal</span>
-                          <span className="text-text-secondary">0,90m × 2,10m</span>
-                        </div>
-                        <div className="flex justify-between items-center py-2 border-b border-border-subtle">
-                          <span>Portas Internas</span>
-                          <span className="text-text-secondary">0,80m × 2,10m</span>
-                        </div>
-                        <div className="flex justify-between items-center py-2 border-b border-border-subtle">
-                          <span>Janelas Salas</span>
-                          <span className="text-text-secondary">1,20m × 1,20m</span>
-                        </div>
-                        <div className="flex justify-between items-center py-2">
-                          <span>Janelas Quartos</span>
-                          <span className="text-text-secondary">1,00m × 1,20m</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {activeTab === 'materials' && (
-              <Card className="card-elevated">
-                <CardHeader>
-                  <CardTitle>Lista de Materiais</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {[
-                      { category: 'Estrutura', items: ['Concreto usinado', 'Aço CA-50', 'Blocos estruturais'] },
-                      { category: 'Revestimentos', items: ['Cerâmica 60x60cm', 'Pintura acrílica', 'Gesso liso'] },
-                      { category: 'Esquadrias', items: ['Janelas alumínio', 'Portas madeira', 'Vidros temperados'] },
-                      { category: 'Cobertura', items: ['Telhas cerâmicas', 'Estrutura madeira', 'Manta térmica'] }
-                    ].map((category, index) => (
-                      <div key={index} className="bg-surface p-4 rounded-lg">
-                        <h5 className="font-semibold text-foreground mb-2">{category.category}</h5>
-                        <ul className="text-sm text-text-secondary space-y-1">
-                          {category.items.map((item, i) => (
-                            <li key={i}>• {item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Room List */}
-            <Card className="card-elevated">
-              <CardHeader>
-                <CardTitle>Ambientes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {rooms.map((room, index) => (
-                    <div key={index} className="flex justify-between items-center py-2 border-b border-border-subtle last:border-0">
-                      <span className="text-sm font-medium text-foreground">{room.name}</span>
-                      <span className="text-sm text-text-secondary">{room.area} m²</span>
-                    </div>
-                  ))}
-                  <div className="pt-3 border-t border-border flex justify-between items-center font-semibold">
-                    <span>Total</span>
-                    <span className="text-primary">{totalCalculatedArea.toFixed(1)} m²</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Actions */}
-            <Card className="card-elevated">
-              <CardContent className="pt-6">
-                <div className="space-y-4">
-                  <Button onClick={onStartNew} className="w-full btn-primary">
-                    <Home className="mr-2 w-4 h-4" />
-                    Nova Planta Baixa
-                  </Button>
-                  
-                  <Button variant="outline" className="w-full btn-secondary">
-                    <Eye className="mr-2 w-4 h-4" />
-                    Visualizar 3D
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <Button 
+            onClick={onStartNew}
+            className="btn-primary"
+          >
+            Nova Planta Baixa
+          </Button>
         </div>
       </div>
     </div>

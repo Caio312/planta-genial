@@ -20,6 +20,14 @@ interface FloorPlanData {
   hasGarage: boolean;
   hasBalcony: boolean;
   style: string;
+  windows?: Array<{
+    room: string;
+    type: 'normal' | 'basculante';
+    width: number;
+    height: number;
+    sillHeight: number;
+    quantity: number;
+  }>;
 }
 
 const STEPS = [
@@ -39,7 +47,14 @@ export const FloorPlanWizard = ({ onBack, onComplete }: FloorPlanWizardProps) =>
     bathrooms: 2,
     hasGarage: true,
     hasBalcony: true,
-    style: "moderno_minimalista"
+    style: "moderno_minimalista",
+    windows: [
+      { room: "Sala de Estar", type: "normal", width: 1.2, height: 1.2, sillHeight: 1.0, quantity: 1 },
+      { room: "Quarto Master", type: "normal", width: 1.0, height: 1.2, sillHeight: 1.0, quantity: 1 },
+      { room: "Quarto 2", type: "normal", width: 1.0, height: 1.2, sillHeight: 1.0, quantity: 1 },
+      { room: "Cozinha", type: "basculante", width: 0.6, height: 0.6, sillHeight: 1.6, quantity: 1 },
+      { room: "Banheiro Social", type: "basculante", width: 0.6, height: 0.6, sillHeight: 1.6, quantity: 1 }
+    ]
   });
 
   const handleNext = () => {
@@ -157,56 +172,134 @@ export const FloorPlanWizard = ({ onBack, onComplete }: FloorPlanWizardProps) =>
   );
 };
 
-const DimensionsStep = ({ data, updateData }: { data: FloorPlanData; updateData: (updates: Partial<FloorPlanData>) => void }) => (
-  <div className="grid md:grid-cols-2 gap-8">
-    <div className="space-y-6">
-      <div>
-        <Label className="text-base font-medium text-foreground mb-3 block">
-          Área Total da Casa (m²)
+const DimensionsStep = ({ data, updateData }: { data: FloorPlanData; updateData: (updates: Partial<FloorPlanData>) => void }) => {
+  const [isEditing, setIsEditing] = useState<string | null>(null);
+
+  const handleQuickEdit = (field: string, value: number) => {
+    updateData({ [field]: value });
+    setIsEditing(null);
+  };
+
+  return (
+    <div className="space-y-8">
+      {/* Área Total */}
+      <div className="glass-card p-6">
+        <Label className="text-base font-medium text-foreground mb-4 block flex items-center">
+          <Home className="w-5 h-5 mr-2" />
+          Área Total da Casa
         </Label>
-        <Input
-          type="number"
-          value={data.totalArea}
-          onChange={(e) => updateData({ totalArea: Number(e.target.value) })}
-          className="input-apple text-lg"
-          min={80}
-          max={150}
-        />
-        <p className="text-sm text-text-tertiary mt-2">Entre 80 e 150 m²</p>
+        
+        <div className="grid grid-cols-3 gap-4 mb-4">
+          {[80, 100, 120, 150].map(area => (
+            <Button
+              key={area}
+              variant={data.totalArea === area ? "default" : "outline"}
+              onClick={() => updateData({ totalArea: area })}
+              className={`h-12 ${data.totalArea === area ? "btn-primary" : "btn-secondary"}`}
+            >
+              {area}m²
+            </Button>
+          ))}
+        </div>
+        
+        <div className="flex items-center space-x-4">
+          <Input
+            type="number"
+            value={data.totalArea}
+            onChange={(e) => updateData({ totalArea: Number(e.target.value) })}
+            className="input-apple text-lg max-w-32"
+            min={80}
+            max={150}
+            step={5}
+          />
+          <span className="text-text-secondary">m² (Entre 80 e 150 m²)</span>
+        </div>
+      </div>
+
+      {/* Dimensões do Terreno */}
+      <div className="glass-card p-6">
+        <Label className="text-base font-medium text-foreground mb-4 block flex items-center">
+          <ArrowRight className="w-5 h-5 mr-2" />
+          Dimensões do Terreno
+        </Label>
+        
+        <div className="grid md:grid-cols-2 gap-6">
+          <div>
+            <Label className="text-sm text-text-secondary mb-2 block">Largura (m)</Label>
+            <div className="grid grid-cols-4 gap-2 mb-3">
+              {[8, 10, 12, 15, 20].map(width => (
+                <Button
+                  key={width}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => updateData({ lotWidth: width })}
+                  className={`text-xs ${data.lotWidth === width ? "bg-primary-light text-primary" : ""}`}
+                >
+                  {width}m
+                </Button>
+              ))}
+            </div>
+            <Input
+              type="number"
+              value={data.lotWidth}
+              onChange={(e) => updateData({ lotWidth: Number(e.target.value) })}
+              className="input-apple"
+              min={8}
+              max={20}
+              step={0.5}
+            />
+          </div>
+          
+          <div>
+            <Label className="text-sm text-text-secondary mb-2 block">Profundidade (m)</Label>
+            <div className="grid grid-cols-4 gap-2 mb-3">
+              {[15, 20, 25, 30].map(depth => (
+                <Button
+                  key={depth}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => updateData({ lotDepth: depth })}
+                  className={`text-xs ${data.lotDepth === depth ? "bg-primary-light text-primary" : ""}`}
+                >
+                  {depth}m
+                </Button>
+              ))}
+            </div>
+            <Input
+              type="number"
+              value={data.lotDepth}
+              onChange={(e) => updateData({ lotDepth: Number(e.target.value) })}
+              className="input-apple"
+              min={15}
+              max={30}
+              step={0.5}
+            />
+          </div>
+        </div>
+
+        {/* Preview Visual */}
+        <div className="mt-6 p-4 bg-surface rounded-xl">
+          <p className="text-sm text-text-secondary mb-3">Preview das Dimensões:</p>
+          <div className="flex items-center justify-center">
+            <div 
+              className="border-2 border-dashed border-primary bg-primary-light/20 rounded-lg flex items-center justify-center relative"
+              style={{
+                width: Math.min(200, data.lotWidth * 8) + 'px',
+                height: Math.min(150, data.lotDepth * 5) + 'px'
+              }}
+            >
+              <div className="text-xs text-primary font-medium">
+                {data.lotWidth}m × {data.lotDepth}m
+                <br />
+                <span className="text-text-tertiary">{data.totalArea}m² área</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-    
-    <div className="space-y-6">
-      <div>
-        <Label className="text-base font-medium text-foreground mb-3 block">
-          Largura do Terreno (m)
-        </Label>
-        <Input
-          type="number"
-          value={data.lotWidth}
-          onChange={(e) => updateData({ lotWidth: Number(e.target.value) })}
-          className="input-apple text-lg"
-          min={8}
-          max={20}
-        />
-      </div>
-      
-      <div>
-        <Label className="text-base font-medium text-foreground mb-3 block">
-          Profundidade do Terreno (m)
-        </Label>
-        <Input
-          type="number"
-          value={data.lotDepth}
-          onChange={(e) => updateData({ lotDepth: Number(e.target.value) })}
-          className="input-apple text-lg"
-          min={15}
-          max={30}
-        />
-      </div>
-    </div>
-  </div>
-);
+  );
+};
 
 const ProgramStep = ({ data, updateData }: { data: FloorPlanData; updateData: (updates: Partial<FloorPlanData>) => void }) => (
   <div className="grid md:grid-cols-2 gap-8">
