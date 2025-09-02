@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,8 @@ import { ArrowLeft, Download, Eye, FileText, Home, Users, Bath, Car, CheckCircle
 import { FloorPlanViewer } from "./FloorPlanViewer";
 import { MaterialQuantities } from "./MaterialQuantities";
 import { toast } from "sonner";
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface FloorPlanSpecificationsProps {
   data: FloorPlanData;
@@ -27,6 +29,7 @@ interface FloorPlanData {
 
 export const FloorPlanSpecifications = ({ data, onBack, onStartNew }: FloorPlanSpecificationsProps) => {
   const [activeTab, setActiveTab] = useState("viewer");
+  const printRef = useRef<HTMLDivElement>(null);
   
   const getStyleName = (styleId: string) => {
     const styles = {
@@ -38,7 +41,29 @@ export const FloorPlanSpecifications = ({ data, onBack, onStartNew }: FloorPlanS
   };
 
   const handleExportPDF = () => {
-    toast.info("Gerando PDF... Esta funcionalidade será implementada em breve!");
+    toast.info("Gerando PDF...");
+    const input = printRef.current;
+    if (input) {
+      html2canvas(input, { scale: 2 }).then((canvas) => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+        const ratio = canvasWidth / canvasHeight;
+        const width = pdfWidth - 20;
+        const height = width / ratio;
+        
+        pdf.addImage(imgData, 'PNG', 10, 10, width, height);
+        pdf.save('plano-baixa.pdf');
+        toast.success("PDF gerado com sucesso!");
+      }).catch(() => {
+        toast.error("Erro ao gerar o PDF.");
+      });
+    } else {
+      toast.error("Não foi possível encontrar o conteúdo para gerar o PDF.");
+    }
   };
 
   const handleExportDWG = () => {
@@ -130,6 +155,7 @@ export const FloorPlanSpecifications = ({ data, onBack, onStartNew }: FloorPlanS
 
           <TabsContent value="viewer">
             <FloorPlanViewer 
+              ref={printRef}
               data={data}
               onExportPDF={handleExportPDF}
               onExportDWG={handleExportDWG}
