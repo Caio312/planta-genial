@@ -2,6 +2,7 @@ import { useState } from "react";
 import { HeroSection } from "@/components/HeroSection";
 import { FloorPlanWizard } from "@/components/FloorPlanWizard";
 import { FloorPlanSpecifications } from "@/components/FloorPlanSpecifications";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 type AppState = 'hero' | 'wizard' | 'specifications';
 
@@ -10,10 +11,16 @@ interface FloorPlanData {
   lotWidth: number;
   lotDepth: number;
   bedrooms: number;
+  suites: number;
   bathrooms: number;
   hasGarage: boolean;
   hasBalcony: boolean;
+  hasOffice: boolean;
+  hasLaundry: boolean;
   style: string;
+  livingStyle: 'integrated' | 'separated';
+  drawingStyle: 'technical_2d' | 'humanized_2d' | 'isometric_3d';
+  generatedImageUrl?: string;
 }
 
 const Index = () => {
@@ -44,6 +51,10 @@ const Index = () => {
 
   return (
     <>
+      <div className="fixed top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
+      
       {currentState === 'hero' && (
         <HeroSection onGetStarted={handleGetStarted} />
       )}
