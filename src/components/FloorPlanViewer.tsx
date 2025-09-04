@@ -340,11 +340,17 @@ export const FloorPlanViewer = ({ data, onExportPDF, onExportDWG, onGenerate3D }
       {/* Canvas Viewer */}
       <Card className="card-elevated">
         <CardContent className="p-6">
-          <div className="bg-white rounded-lg border overflow-auto" style={{ height: '500px' }}>
+          <div 
+            className="bg-white rounded-lg border overflow-auto flex items-center justify-center" 
+            style={{ 
+              height: Math.max(400, Math.min(600, data.lotDepth * scale + 100)) + 'px',
+              width: '100%'
+            }}
+          >
             <canvas
               ref={canvasRef}
-              width={800}
-              height={600}
+              width={Math.max(600, data.lotWidth * scale + 100)}
+              height={Math.max(400, data.lotDepth * scale + 100)}
               className="cursor-move"
             />
           </div>

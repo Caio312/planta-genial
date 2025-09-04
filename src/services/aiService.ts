@@ -23,20 +23,20 @@ class AIService {
   private readonly baseUrl = 'https://api.openai.com/v1/images/generations';
   
   private generatePrompt(request: FloorPlanRequest): string {
-    const { totalArea, lotWidth, lotDepth, bedrooms, suites, bathrooms, livingStyle, additionalSpaces, architecturalStyle, drawingStyle } = request;
+    const { totalArea, lotWidth, lotDepth, bedrooms, suites, bathrooms, additionalSpaces, drawingStyle } = request;
     
     let prompt = `Crie uma planta baixa arquitetônica profissional e detalhada com as seguintes especificações:
 
 INFORMAÇÕES BÁSICAS:
 - Área total: ${totalArea}m²
 - Terreno: ${lotWidth}m × ${lotDepth}m
-- Estilo: ${architecturalStyle}
+- Estilo: Moderno minimalista com toque brasileiro contemporâneo
 - Tipo de desenho: ${drawingStyle}
 
 PROGRAMA ARQUITETÔNICO:
 - ${bedrooms} quartos (${suites} suítes)
 - ${bathrooms} banheiros sociais
-- Área social: ${livingStyle === 'integrated' ? 'conceito aberto (sala/cozinha integradas)' : 'ambientes separados'}`;
+- Área social: conceito aberto e integrado`;
 
     if (additionalSpaces.length > 0) {
       prompt += `\n- Espaços adicionais: ${additionalSpaces.join(', ')}`;
@@ -71,10 +71,10 @@ ESPECIFICAÇÕES TÉCNICAS:
       case 'isometric_3d':
         prompt += `
 - Vista isométrica 3D
-- Altura de paredes 2.70m
-- Telhado simples
+- Altura de paredes 2.50m (pé direito padrão brasileiro)
+- Telhado simples estilo brasileiro
 - Vegetação externa básica
-- Sombras realistas`;
+- Sombras realistas e suaves`;
         break;
     }
 
@@ -88,6 +88,67 @@ QUALIDADE:
 - Conformidade com normas básicas de acessibilidade`;
 
     return prompt;
+  }
+
+  async generate3D(request: FloorPlanRequest): Promise<AIResponse> {
+    // Force 3D isometric style with 2.5m ceiling
+    const request3D = { ...request, drawingStyle: 'isometric_3d' as const };
+    
+    try {
+      const startTime = Date.now();
+      
+      // In development, return mock 3D response
+      if (process.env.NODE_ENV === 'development') {
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        return {
+          success: true,
+          imageUrl: '/placeholder-3d-floorplan.jpg',
+          model: 'mock-3d-ai',
+          generationTime: 3000
+        };
+      }
+
+      // In production, use Gemini for 3D generation (better for architectural 3D)
+      const prompt = this.generatePrompt(request3D);
+      
+      const response = await fetch('/api/generate-3d-floorplan', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: prompt + `\n\nFOCO ESPECIAL PARA 3D:
+- Vista isométrica com perspectiva 45° 
+- Pé direito de 2.50m (altura padrão brasileira)
+- Detalhamento de telhado brasileiro (telhas cerâmicas)
+- Texturas realistas nas paredes e pisos
+- Iluminação natural através das janelas
+- Vegetação paisagística externa`,
+          model: 'gemini-pro-vision',
+          format: '3d_render'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`3D Generation API Error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const generationTime = Date.now() - startTime;
+
+      return {
+        success: true,
+        imageUrl: data.imageUrl,
+        model: 'gemini-pro-vision',
+        generationTime
+      };
+    } catch (error) {
+      console.error('3D Generation Error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Erro na geração 3D'
+      };
+    }
   }
 
   async generateFloorPlan(request: FloorPlanRequest): Promise<AIResponse> {

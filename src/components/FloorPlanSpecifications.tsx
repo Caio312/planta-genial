@@ -46,12 +46,53 @@ export const FloorPlanSpecifications = ({ data, onBack, onStartNew }: FloorPlanS
   };
 
   const handleGenerate3D = async () => {
-    toast.loading("Gerando visualização 3D com IA...");
+    const loadingToast = toast.loading("Gerando visualização 3D com IA...", {
+      description: "Criando vista isométrica com pé direito de 2.5m"
+    });
     
-    // Simulate 3D generation
-    setTimeout(() => {
-      toast.success("Visualização 3D gerada! Esta funcionalidade será aprimorada em breve.");
-    }, 3000);
+    try {
+      const { aiService } = await import('@/services/aiService');
+      
+      const request = {
+        totalArea: data.totalArea,
+        lotWidth: data.lotWidth,
+        lotDepth: data.lotDepth,
+        bedrooms: data.bedrooms,
+        suites: 1, // Default to 1 suite
+        bathrooms: data.bathrooms,
+        livingStyle: 'integrated' as const,
+        additionalSpaces: [
+          ...(data.hasGarage ? ['Garagem'] : []),
+          ...(data.hasBalcony ? ['Varanda'] : [])
+        ],
+        architecturalStyle: 'moderno_minimalista_brasileiro',
+        drawingStyle: 'isometric_3d' as const
+      };
+
+      const result = await aiService.generate3D(request);
+      
+      toast.dismiss(loadingToast);
+      
+      if (result.success) {
+        toast.success("Visualização 3D gerada com sucesso!", {
+          description: "Vista isométrica com pé direito de 2.5m"
+        });
+        
+        // Open 3D view in new tab or modal
+        if (result.imageUrl) {
+          window.open(result.imageUrl, '_blank');
+        }
+      } else {
+        toast.error("Erro na geração 3D", {
+          description: result.error || "Tente novamente em alguns momentos"
+        });
+      }
+    } catch (error) {
+      toast.dismiss(loadingToast);
+      toast.error("Erro na geração 3D", {
+        description: "Serviço temporariamente indisponível"
+      });
+    }
   };
 
   const getRoomList = () => {

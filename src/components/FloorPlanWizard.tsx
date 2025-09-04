@@ -16,9 +16,11 @@ interface FloorPlanData {
   lotWidth: number;
   lotDepth: number;
   bedrooms: number;
+  suites: number;
   bathrooms: number;
   hasGarage: boolean;
   hasBalcony: boolean;
+  hasOffice: boolean;
   style: string;
   windows?: Array<{
     room: string;
@@ -32,9 +34,7 @@ interface FloorPlanData {
 
 const STEPS = [
   { id: 'dimensions', title: 'Dimensões', icon: Home },
-  { id: 'program', title: 'Programa', icon: Users },
-  { id: 'extras', title: 'Extras', icon: Bath },
-  { id: 'style', title: 'Estilo', icon: Car }
+  { id: 'program', title: 'Programa', icon: Users }
 ];
 
 export const FloorPlanWizard = ({ onBack, onComplete }: FloorPlanWizardProps) => {
@@ -43,11 +43,13 @@ export const FloorPlanWizard = ({ onBack, onComplete }: FloorPlanWizardProps) =>
     totalArea: 120,
     lotWidth: 12,
     lotDepth: 20,
-    bedrooms: 3,
+    bedrooms: 2,
+    suites: 1,
     bathrooms: 2,
     hasGarage: true,
-    hasBalcony: true,
-    style: "moderno_minimalista",
+    hasBalcony: false,
+    hasOffice: false,
+    style: "moderno_minimalista_brasileiro",
     windows: [
       { room: "Sala de Estar", type: "normal", width: 1.2, height: 1.2, sillHeight: 1.0, quantity: 1 },
       { room: "Quarto Master", type: "normal", width: 1.0, height: 1.2, sillHeight: 1.0, quantity: 1 },
@@ -139,12 +141,6 @@ export const FloorPlanWizard = ({ onBack, onComplete }: FloorPlanWizardProps) =>
             {currentStep === 1 && (
               <ProgramStep data={data} updateData={updateData} />
             )}
-            {currentStep === 2 && (
-              <ExtrasStep data={data} updateData={updateData} />
-            )}
-            {currentStep === 3 && (
-              <StyleStep data={data} updateData={updateData} />
-            )}
           </CardContent>
         </Card>
 
@@ -173,34 +169,14 @@ export const FloorPlanWizard = ({ onBack, onComplete }: FloorPlanWizardProps) =>
 };
 
 const DimensionsStep = ({ data, updateData }: { data: FloorPlanData; updateData: (updates: Partial<FloorPlanData>) => void }) => {
-  const [isEditing, setIsEditing] = useState<string | null>(null);
-
-  const handleQuickEdit = (field: string, value: number) => {
-    updateData({ [field]: value });
-    setIsEditing(null);
-  };
-
   return (
     <div className="space-y-8">
       {/* Área Total */}
       <div className="glass-card p-6">
         <Label className="text-base font-medium text-foreground mb-4 block flex items-center">
           <Home className="w-5 h-5 mr-2" />
-          Área Total da Casa
+          Área Total Construída
         </Label>
-        
-        <div className="grid grid-cols-3 gap-4 mb-4">
-          {[80, 100, 120, 150].map(area => (
-            <Button
-              key={area}
-              variant={data.totalArea === area ? "default" : "outline"}
-              onClick={() => updateData({ totalArea: area })}
-              className={`h-12 ${data.totalArea === area ? "btn-primary" : "btn-secondary"}`}
-            >
-              {area}m²
-            </Button>
-          ))}
-        </div>
         
         <div className="flex items-center space-x-4">
           <Input
@@ -218,27 +194,13 @@ const DimensionsStep = ({ data, updateData }: { data: FloorPlanData; updateData:
 
       {/* Dimensões do Terreno */}
       <div className="glass-card p-6">
-        <Label className="text-base font-medium text-foreground mb-4 block flex items-center">
-          <ArrowRight className="w-5 h-5 mr-2" />
+        <Label className="text-base font-medium text-foreground mb-4 block">
           Dimensões do Terreno
         </Label>
         
         <div className="grid md:grid-cols-2 gap-6">
           <div>
-            <Label className="text-sm text-text-secondary mb-2 block">Largura (m)</Label>
-            <div className="grid grid-cols-4 gap-2 mb-3">
-              {[8, 10, 12, 15, 20].map(width => (
-                <Button
-                  key={width}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => updateData({ lotWidth: width })}
-                  className={`text-xs ${data.lotWidth === width ? "bg-primary-light text-primary" : ""}`}
-                >
-                  {width}m
-                </Button>
-              ))}
-            </div>
+            <Label className="text-sm text-text-secondary mb-2 block">Comprimento (m)</Label>
             <Input
               type="number"
               value={data.lotWidth}
@@ -251,20 +213,7 @@ const DimensionsStep = ({ data, updateData }: { data: FloorPlanData; updateData:
           </div>
           
           <div>
-            <Label className="text-sm text-text-secondary mb-2 block">Profundidade (m)</Label>
-            <div className="grid grid-cols-4 gap-2 mb-3">
-              {[15, 20, 25, 30].map(depth => (
-                <Button
-                  key={depth}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => updateData({ lotDepth: depth })}
-                  className={`text-xs ${data.lotDepth === depth ? "bg-primary-light text-primary" : ""}`}
-                >
-                  {depth}m
-                </Button>
-              ))}
-            </div>
+            <Label className="text-sm text-text-secondary mb-2 block">Largura (m)</Label>
             <Input
               type="number"
               value={data.lotDepth}
@@ -276,25 +225,34 @@ const DimensionsStep = ({ data, updateData }: { data: FloorPlanData; updateData:
             />
           </div>
         </div>
+      </div>
 
-        {/* Preview Visual */}
-        <div className="mt-6 p-4 bg-surface rounded-xl">
-          <p className="text-sm text-text-secondary mb-3">Preview das Dimensões:</p>
-          <div className="flex items-center justify-center">
-            <div 
-              className="border-2 border-dashed border-primary bg-primary-light/20 rounded-lg flex items-center justify-center relative"
-              style={{
-                width: Math.min(200, data.lotWidth * 8) + 'px',
-                height: Math.min(150, data.lotDepth * 5) + 'px'
-              }}
-            >
-              <div className="text-xs text-primary font-medium">
-                {data.lotWidth}m × {data.lotDepth}m
-                <br />
-                <span className="text-text-tertiary">{data.totalArea}m² área</span>
-              </div>
-            </div>
-          </div>
+      {/* Extras - Moved from previous step */}
+      <div className="glass-card p-6">
+        <Label className="text-base font-medium text-foreground mb-4 block">
+          Espaços Adicionais
+        </Label>
+        <div className="grid md:grid-cols-3 gap-4">
+          <OptionCard
+            title="Garagem"
+            description="Garagem coberta"
+            selected={data.hasGarage}
+            onToggle={() => updateData({ hasGarage: !data.hasGarage })}
+          />
+          
+          <OptionCard
+            title="Varanda"
+            description="Área externa coberta"
+            selected={data.hasBalcony}
+            onToggle={() => updateData({ hasBalcony: !data.hasBalcony })}
+          />
+
+          <OptionCard
+            title="Escritório"
+            description="Home office"
+            selected={data.hasOffice}
+            onToggle={() => updateData({ hasOffice: !data.hasOffice })}
+          />
         </div>
       </div>
     </div>
@@ -302,89 +260,68 @@ const DimensionsStep = ({ data, updateData }: { data: FloorPlanData; updateData:
 };
 
 const ProgramStep = ({ data, updateData }: { data: FloorPlanData; updateData: (updates: Partial<FloorPlanData>) => void }) => (
-  <div className="grid md:grid-cols-2 gap-8">
+  <div className="space-y-8">
+    <div className="grid md:grid-cols-2 gap-6">
+      <div>
+        <Label className="text-base font-medium text-foreground mb-3 block">
+          Número de Quartos
+        </Label>
+        <div className="grid grid-cols-2 gap-3">
+          {[2, 3].map(num => (
+            <Button
+              key={num}
+              variant={data.bedrooms === num ? "default" : "outline"}
+              onClick={() => updateData({ bedrooms: num })}
+              className={data.bedrooms === num ? "btn-primary" : "btn-secondary"}
+            >
+              {num} Quartos
+            </Button>
+          ))}
+        </div>
+      </div>
+      
+      <div>
+        <Label className="text-base font-medium text-foreground mb-3 block">
+          Número de Banheiros
+        </Label>
+        <div className="grid grid-cols-2 gap-3">
+          {[2, 3].map(num => (
+            <Button
+              key={num}
+              variant={data.bathrooms === num ? "default" : "outline"}
+              onClick={() => updateData({ bathrooms: num })}
+              className={data.bathrooms === num ? "btn-primary" : "btn-secondary"}
+            >
+              {num} Banheiros
+            </Button>
+          ))}
+        </div>
+      </div>
+    </div>
+
     <div>
       <Label className="text-base font-medium text-foreground mb-3 block">
-        Número de Quartos
+        Configuração de Suítes
       </Label>
-      <div className="grid grid-cols-2 gap-3">
-        {[2, 3].map(num => (
+      <div className="grid grid-cols-3 gap-3">
+        {[0, 1, 2].map(num => (
           <Button
             key={num}
-            variant={data.bedrooms === num ? "default" : "outline"}
-            onClick={() => updateData({ bedrooms: num })}
-            className={data.bedrooms === num ? "btn-primary" : "btn-secondary"}
+            variant={data.suites === num ? "default" : "outline"}
+            onClick={() => updateData({ suites: num })}
+            className={data.suites === num ? "btn-primary" : "btn-secondary"}
           >
-            {num} Quartos
+            {num === 0 ? 'Sem suíte' : `${num} Suíte${num > 1 ? 's' : ''}`}
           </Button>
         ))}
       </div>
       <p className="text-sm text-text-tertiary mt-2">
-        {data.bedrooms === 3 ? "Inclui 1 suíte master" : "2 quartos + 1 banheiro social"}
+        Suíte = quarto com banheiro privativo
       </p>
     </div>
-    
-    <div>
-      <Label className="text-base font-medium text-foreground mb-3 block">
-        Número de Banheiros
-      </Label>
-      <div className="grid grid-cols-2 gap-3">
-        {[2, 3].map(num => (
-          <Button
-            key={num}
-            variant={data.bathrooms === num ? "default" : "outline"}
-            onClick={() => updateData({ bathrooms: num })}
-            className={data.bathrooms === num ? "btn-primary" : "btn-secondary"}
-          >
-            {num} Banheiros
-          </Button>
-        ))}
-      </div>
-    </div>
   </div>
 );
 
-const ExtrasStep = ({ data, updateData }: { data: FloorPlanData; updateData: (updates: Partial<FloorPlanData>) => void }) => (
-  <div className="space-y-8">
-    <div className="grid md:grid-cols-2 gap-6">
-      <OptionCard
-        title="Garagem"
-        description="Garagem coberta para 1 veículo"
-        selected={data.hasGarage}
-        onToggle={() => updateData({ hasGarage: !data.hasGarage })}
-      />
-      
-      <OptionCard
-        title="Varanda/Terraço"
-        description="Área externa coberta de lazer"
-        selected={data.hasBalcony}
-        onToggle={() => updateData({ hasBalcony: !data.hasBalcony })}
-      />
-    </div>
-  </div>
-);
-
-const StyleStep = ({ data, updateData }: { data: FloorPlanData; updateData: (updates: Partial<FloorPlanData>) => void }) => {
-  const styles = [
-    { id: "moderno_minimalista", name: "Moderno Minimalista", description: "Linhas clean e espaços integrados" },
-    { id: "tradicional_brasileiro", name: "Tradicional Brasileiro", description: "Estilo clássico com varanda e telha cerâmica" },
-    { id: "contemporaneo_sustentavel", name: "Contemporâneo Sustentável", description: "Design moderno com foco em eficiência" }
-  ];
-
-  return (
-    <div className="space-y-6">
-      {styles.map(style => (
-        <StyleCard
-          key={style.id}
-          name={style.name}
-          description={style.description}
-          selected={data.style === style.id}
-          onSelect={() => updateData({ style: style.id })}
-        />
-      ))}
-    </div>
-  );
-};
 
 const OptionCard = ({ title, description, selected, onToggle }: {
   title: string;
