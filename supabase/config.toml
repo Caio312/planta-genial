@@ -1,0 +1,7 @@
+project_id = "cevfhaytwkwohbjwqilt"
+
+[functions.generate-floorplan]
+verify_jwt = false
+
+[functions.generate-3d-floorplan]
+verify_jwt = false
