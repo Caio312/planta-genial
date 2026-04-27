@@ -199,7 +199,6 @@ export const FloorPlanSpecifications = ({ data, onBack, onStartNew }: FloorPlanS
               data={data}
               onExportPDF={handleExportPDF}
               onExportDWG={handleExportDWG}
-              onGenerate3D={handleGenerate3D}
             />
           </TabsContent>
 
