@@ -34,16 +34,19 @@ serve(async (req) => {
 
     const enhancedPrompt = `${prompt}
 
-REQUISITOS CRÍTICOS DA IMAGEM:
-- Vista superior estritamente ortogonal (top-down 2D), NÃO use perspectiva nem isométrico
-- Fundo branco puro, paredes em linhas pretas espessas (paredes externas mais grossas)
-- Cotas (dimensões em metros) marcadas nas paredes externas e em ambientes principais
-- Símbolos arquitetônicos NBR: portas com arco de abertura, janelas com linhas duplas
-- Texto legível em português: nome do ambiente + área em m² (ex: "SALA 25.5 m²")
-- Norte indicado com seta no canto superior direito
-- Escala 1:100 indicada
-- Estilo brasileiro contemporâneo minimalista
-- Imagem nítida, alta resolução, qualidade técnica de prancha arquitetônica`;
+REQUISITOS CRÍTICOS — PRANCHA ARQUITETÔNICA NBR 6492 / NBR 15575:
+- VISTA: estritamente top-down ortogonal (planta baixa 2D), SEM perspectiva, SEM isométrico, SEM sombras realistas
+- DESENHO TÉCNICO: fundo branco puro, paredes pretas (externas espessas ~25cm, internas ~15cm), hachuras de parede em corte
+- COTAS em metros nas paredes externas e internas principais (ex: "3.20", "4.15")
+- SÍMBOLOS NBR: portas com arco de abertura de 90°, janelas com linhas duplas paralelas, basculantes com tracejado diagonal
+- MOBILIÁRIO esquemático em planta: camas (com travesseiros), sofá em L, mesa de jantar, fogão, pia, vaso sanitário, box de banheiro
+- TEXTO em PORTUGUÊS legível: "SALA 18.5m²", "QUARTO 9.0m²", "BANHEIRO 3.2m²", "COZINHA 8.0m²"
+- Norte com seta no canto superior direito; escala "ESC 1:100" no canto inferior
+- Áreas mínimas NBR 15575: dormitórios ≥ 8m², sala ≥ 10m², cozinha ≥ 4m², banheiro ≥ 2m²
+- Largura mínima de circulação: 0,90m
+- Pé-direito de referência: 2,50m
+- ESTILO: prancha técnica brasileira contemporânea minimalista, traços limpos e precisos
+- Imagem nítida em alta resolução, proporção respeitando o terreno informado`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',

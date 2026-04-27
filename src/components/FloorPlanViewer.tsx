@@ -3,9 +3,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Download, Eye, ZoomIn, ZoomOut, FileText, Box, Sparkles, Loader2, RefreshCw } from 'lucide-react';
+import { Download, Eye, ZoomIn, ZoomOut, FileText, Box, Sparkles, Loader2, RefreshCw, AlertTriangle, Shuffle } from 'lucide-react';
 import { toast } from 'sonner';
 import { aiService } from '@/services/aiService';
+import {
+  generateLayout as engineGenerateLayout,
+  validateNBR,
+  PATTERN_LABELS,
+  type LayoutPattern,
+  type Room as EngineRoom,
+  type RoomType as EngineRoomType,
+} from '@/services/layoutEngine';
 
 interface FloorPlanData {
   totalArea: number;
@@ -18,22 +26,8 @@ interface FloorPlanData {
   style: string;
 }
 
-type RoomType = 'bedroom' | 'suite' | 'bathroom' | 'living' | 'kitchen' | 'service' | 'garage' | 'balcony' | 'circulation';
-
-interface Window { x: number; y: number; width: number; type: 'normal' | 'basculante'; wall: 'top' | 'bottom' | 'left' | 'right'; }
-interface Door { x: number; y: number; width: number; wall: 'top' | 'bottom' | 'left' | 'right'; swing: 'in' | 'out'; }
-
-interface Room {
-  id: string;
-  name: string;
-  width: number;
-  height: number;
-  x: number;
-  y: number;
-  type: RoomType;
-  windows?: Window[];
-  doors?: Door[];
-}
+type RoomType = EngineRoomType;
+type Room = EngineRoom;
 
 interface FloorPlanViewerProps {
   data: FloorPlanData;
@@ -51,122 +45,20 @@ const ROOM_COLORS: Record<RoomType, string> = {
   garage: '#f3f4f6',
   balcony: '#cffafe',
   circulation: '#f9fafb',
+  office: '#ede9fe',
 };
 
 const ROOM_LABELS: Record<RoomType, string> = {
   bedroom: 'Quarto', suite: 'Suíte', bathroom: 'Banheiro', living: 'Sala/Cozinha',
-  kitchen: 'Cozinha', service: 'Serviço', garage: 'Garagem', balcony: 'Varanda', circulation: 'Circulação'
+  kitchen: 'Cozinha', service: 'Serviço', garage: 'Garagem', balcony: 'Varanda',
+  circulation: 'Circulação', office: 'Escritório',
 };
-
-/**
- * Layout generator: divide a casa em zona social (frente) e zona íntima (fundos),
- * com corredor central. Garagem ocupa lateral. Bem mais coerente que o anterior.
- */
-function generateLayout(data: FloorPlanData): Room[] {
-  const rooms: Room[] = [];
-  const M = 0.5; // recuo do terreno
-  const W = data.lotWidth - 2 * M;
-  const D = data.lotDepth - 2 * M;
-
-  // Garagem na lateral esquerda da frente, se habilitada
-  const garageW = data.hasGarage ? Math.min(3.2, W * 0.3) : 0;
-  if (data.hasGarage) {
-    rooms.push({
-      id: 'garage', name: 'Garagem', type: 'garage',
-      x: M, y: M, width: garageW, height: 5.5,
-      doors: [{ x: garageW / 2 - 1.25, y: 0, width: 2.5, wall: 'top', swing: 'out' }]
-    });
-  }
-
-  const houseX = M + garageW + (data.hasGarage ? 0.15 : 0);
-  const houseW = W - garageW - (data.hasGarage ? 0.15 : 0);
-  const houseY = M;
-  const houseD = D;
-
-  // Zona social (frente): sala + cozinha integradas + varanda opcional
-  const balconyD = data.hasBalcony ? 1.8 : 0;
-  if (data.hasBalcony) {
-    rooms.push({
-      id: 'balcony', name: 'Varanda', type: 'balcony',
-      x: houseX, y: houseY, width: houseW, height: balconyD
-    });
-  }
-
-  const socialY = houseY + balconyD + (data.hasBalcony ? 0.15 : 0);
-  const socialD = Math.max(4.5, houseD * 0.38);
-  rooms.push({
-    id: 'living', name: 'Sala / Cozinha', type: 'living',
-    x: houseX, y: socialY, width: houseW, height: socialD,
-    windows: [
-      { x: 0.5, y: 0, width: 2.0, type: 'normal', wall: 'top' },
-      { x: houseW - 2.5, y: 0, width: 1.5, type: 'normal', wall: 'top' }
-    ],
-    doors: [{ x: houseW / 2 - 0.45, y: 0, width: 0.9, wall: 'top', swing: 'in' }]
-  });
-
-  // Área de serviço
-  const serviceW = Math.min(2.5, houseW * 0.3);
-  const serviceD = 2.0;
-  rooms.push({
-    id: 'service', name: 'Serviço', type: 'service',
-    x: houseX + houseW - serviceW, y: socialY + socialD + 0.15,
-    width: serviceW, height: serviceD,
-    windows: [{ x: serviceW - 0.8, y: 0, width: 0.6, type: 'basculante', wall: 'right' }]
-  });
-
-  // Zona íntima (fundos): corredor + quartos + banheiros
-  const intimateY = socialY + socialD + 0.15;
-  const intimateD = houseD - intimateY + houseY;
-  const corridorH = 1.1;
-
-  rooms.push({
-    id: 'corridor', name: 'Circulação', type: 'circulation',
-    x: houseX, y: intimateY, width: houseW - serviceW - 0.15, height: corridorH,
-  });
-
-  // Quartos abaixo do corredor
-  const bedroomsY = intimateY + corridorH + 0.15;
-  const bedroomsD = intimateD - corridorH - 0.15;
-  const totalRooms = data.bedrooms;
-  const bathW = 1.8;
-  const availW = houseW - bathW - 0.15;
-  const bedW = availW / totalRooms;
-
-  for (let i = 0; i < totalRooms; i++) {
-    const isSuite = i === 0;
-    rooms.push({
-      id: `bed${i}`, name: isSuite ? 'Suíte' : `Quarto ${i + 1}`,
-      type: isSuite ? 'suite' : 'bedroom',
-      x: houseX + i * (bedW + (i > 0 ? 0.15 : 0)),
-      y: bedroomsY,
-      width: bedW - (i > 0 ? 0.15 : 0),
-      height: bedroomsD,
-      windows: [{ x: bedW / 2 - 0.6, y: bedroomsD - 0.05, width: 1.2, type: 'normal', wall: 'bottom' }],
-      doors: [{ x: bedW / 2 - 0.4, y: 0, width: 0.8, wall: 'top', swing: 'in' }]
-    });
-  }
-
-  // Banheiros à direita
-  const bathH = bedroomsD / Math.max(1, data.bathrooms);
-  for (let i = 0; i < data.bathrooms; i++) {
-    rooms.push({
-      id: `bath${i}`, name: i === 0 ? 'Banheiro' : `Banheiro ${i + 1}`, type: 'bathroom',
-      x: houseX + houseW - bathW,
-      y: bedroomsY + i * bathH,
-      width: bathW,
-      height: bathH - (i < data.bathrooms - 1 ? 0.15 : 0),
-      windows: [{ x: bathW - 0.7, y: 0, width: 0.6, type: 'basculante', wall: 'right' }],
-      doors: [{ x: 0, y: bathH / 2 - 0.35, width: 0.7, wall: 'left', swing: 'in' }]
-    });
-  }
-
-  return rooms;
-}
 
 export const FloorPlanViewer = ({ data, onExportPDF, onExportDWG }: FloorPlanViewerProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [scale, setScale] = useState(28);
+  const [pattern, setPattern] = useState<LayoutPattern>('central_corridor');
   const [aiImageUrl, setAiImageUrl] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [view, setView] = useState<'schematic' | 'ai'>('schematic');
@@ -174,12 +66,28 @@ export const FloorPlanViewer = ({ data, onExportPDF, onExportDWG }: FloorPlanVie
   const [loading3D, setLoading3D] = useState(false);
   const [show3DDialog, setShow3DDialog] = useState(false);
 
-  const PAD = 70; // padding para cotas externas
+  const PAD = 70;
+  const PATTERNS: LayoutPattern[] = ['central_corridor', 'linear', 'L_shape', 'compact'];
 
   useEffect(() => {
-    const generated = generateLayout(data);
+    const generated = engineGenerateLayout({
+      totalArea: data.totalArea,
+      lotWidth: data.lotWidth,
+      lotDepth: data.lotDepth,
+      bedrooms: data.bedrooms,
+      bathrooms: data.bathrooms,
+      hasGarage: data.hasGarage,
+      hasBalcony: data.hasBalcony,
+    }, pattern);
     setRooms(generated);
-  }, [data]);
+  }, [data, pattern]);
+
+  const nbrIssues = validateNBR(rooms);
+
+  const cyclePattern = () => {
+    const idx = PATTERNS.indexOf(pattern);
+    setPattern(PATTERNS[(idx + 1) % PATTERNS.length]);
+  };
 
   useEffect(() => {
     if (rooms.length === 0) return;
@@ -416,16 +324,43 @@ export const FloorPlanViewer = ({ data, onExportPDF, onExportDWG }: FloorPlanVie
             {data.totalArea}m² construídos · Terreno {data.lotWidth}×{data.lotDepth}m
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {view === 'schematic' && (
             <>
+              <Button variant="outline" size="sm" onClick={cyclePattern} title="Trocar padrão de layout">
+                <Shuffle className="w-4 h-4 mr-2" />{PATTERN_LABELS[pattern]}
+              </Button>
               <Button variant="outline" size="sm" onClick={() => setScale(s => Math.max(s * 0.85, 12))}><ZoomOut className="w-4 h-4" /></Button>
               <Button variant="outline" size="sm" onClick={() => setScale(s => Math.min(s * 1.15, 60))}><ZoomIn className="w-4 h-4" /></Button>
             </>
           )}
-          <Badge variant="secondary">1:100</Badge>
+          <Badge variant="secondary">1:100 · pé-direito 2,50m</Badge>
         </div>
       </div>
+
+      {view === 'schematic' && nbrIssues.length > 0 && (
+        <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/30">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+                  Validação NBR 15575 — {nbrIssues.length} aviso{nbrIssues.length > 1 ? 's' : ''}
+                </p>
+                <ul className="text-xs text-amber-800 dark:text-amber-300 space-y-0.5 list-disc list-inside">
+                  {nbrIssues.slice(0, 5).map((iss, i) => (
+                    <li key={i}>{iss.message}</li>
+                  ))}
+                  {nbrIssues.length > 5 && <li>+{nbrIssues.length - 5} outros…</li>}
+                </ul>
+                <p className="text-xs text-amber-700 dark:text-amber-400 mt-2">
+                  Tente outro padrão de layout ou aumente as dimensões do terreno.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="flex gap-2 flex-wrap">
         <Button

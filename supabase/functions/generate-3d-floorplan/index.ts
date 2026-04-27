@@ -34,18 +34,19 @@ serve(async (req) => {
 
     const enhancedPrompt = `${prompt}
 
-ESPECIFICAÇÕES PARA VISTA 3D ISOMÉTRICA REALISTA:
-- Vista isométrica/axonométrica em ângulo de 45°, com paredes externas removidas (cutaway)
-- Pé direito de 2.50 metros em todos os ambientes
-- Mostrar mobiliário básico em cada cômodo (camas, sofá, mesa, fogão, vasos sanitários)
-- Telhado estilo brasileiro com telhas cerâmicas
-- Texturas realistas: pisos diferenciados por ambiente, paredes em cor clara
-- Iluminação natural suave entrando pelas janelas
-- Sombras suaves e realistas
-- Vegetação paisagística externa (jardim, árvores)
-- Calçada e elementos externos
-- Renderização arquitetônica profissional, alta qualidade
-- ${referenceImageUrl ? 'IMPORTANTE: Use a planta baixa 2D fornecida como referência exata para o layout dos cômodos' : ''}`;
+VISTA 3D ISOMÉTRICA ARQUITETÔNICA REALISTA — DOLLHOUSE CUTAWAY:
+- Vista isométrica em ângulo de 30°-45° (axonométrica), tipo "boneca/dollhouse" sem teto e com paredes externas rebaixadas para revelar todos os ambientes
+- PÉ-DIREITO de exatamente 2,50 metros em todos os cômodos
+- LAYOUT IDÊNTICO à planta baixa fornecida — respeite EXATAMENTE a posição, formato e proporção de cada cômodo (não invente, não rearranje)
+- Mobiliário realista por ambiente: quartos (cama de casal/solteiro, criado-mudo, guarda-roupa), sala (sofá, TV, mesa de centro), cozinha (bancada, fogão, geladeira, pia), banheiro (vaso, pia, box), área de serviço (tanque, máquina)
+- Materiais brasileiros: piso porcelanato claro na área social, piso laminado/cerâmico nos quartos, azulejo branco nos molhados
+- Paredes externas em cor clara (branco/bege), esquadrias de alumínio escuro
+- Telhado: representar contorno apenas (cutaway), com telhas cerâmicas brasileiras visíveis nas bordas
+- Iluminação natural suave entrando pelas janelas, sombras realistas porém sutis
+- Vegetação paisagística externa (gramado, arbustos, 1-2 árvores pequenas)
+- Renderização tipo SketchUp/Lumion arquitetônico profissional, fundo branco/neutro
+- Sem texto, sem cotas, sem números — apenas a renderização 3D
+${referenceImageUrl ? '\n⚠️ CRÍTICO: A imagem em anexo é a planta baixa 2D oficial. Replique exatamente o mesmo layout, número e disposição dos cômodos no 3D.' : ''}`;
 
     const userContent: any = referenceImageUrl
       ? [
