@@ -37,61 +37,86 @@ export const FloorPlanSpecifications = ({ data, onBack, onStartNew }: FloorPlanS
     return styles[styleId as keyof typeof styles] || styleId;
   };
 
-  const handleExportPDF = () => {
-    toast.info("Gerando PDF... Esta funcionalidade será implementada em breve!");
+  const handleExportPDF = async (aiImageUrl?: string) => {
+    const t = toast.loading("Gerando PDF do projeto...");
+    try {
+      const { pdfService } = await import('@/services/pdfService');
+      await pdfService.downloadPDF({
+        projectName: `Residencia_${data.totalArea}m2`,
+        clientName: 'Cliente',
+        includeSpecifications: true,
+        includeMaterials: true,
+        quality: 'high',
+        floorPlanImageUrl: aiImageUrl || '',
+        projectData: {
+          totalArea: data.totalArea,
+          lotWidth: data.lotWidth,
+          lotDepth: data.lotDepth,
+          bedrooms: data.bedrooms,
+          suites: 1,
+          bathrooms: data.bathrooms,
+          additionalSpaces: [
+            ...(data.hasGarage ? ['Garagem'] : []),
+            ...(data.hasBalcony ? ['Varanda'] : [])
+          ],
+          architecturalStyle: getStyleName(data.style)
+        }
+      });
+      toast.dismiss(t);
+      toast.success("PDF baixado com sucesso!");
+    } catch (e) {
+      toast.dismiss(t);
+      toast.error("Erro ao gerar PDF");
+    }
   };
 
   const handleExportDWG = () => {
-    toast.info("Preparando arquivo DWG... Esta funcionalidade será implementada em breve!");
-  };
-
-  const handleGenerate3D = async () => {
-    const loadingToast = toast.loading("Gerando visualização 3D com IA...", {
-      description: "Criando vista isométrica com pé direito de 2.5m"
-    });
-    
+    // Gera um arquivo DXF (compatível com AutoCAD/DWG) com as paredes e ambientes
     try {
-      const { aiService } = await import('@/services/aiService');
-      
-      const request = {
-        totalArea: data.totalArea,
-        lotWidth: data.lotWidth,
-        lotDepth: data.lotDepth,
-        bedrooms: data.bedrooms,
-        suites: 1, // Default to 1 suite
-        bathrooms: data.bathrooms,
-        livingStyle: 'integrated' as const,
-        additionalSpaces: [
-          ...(data.hasGarage ? ['Garagem'] : []),
-          ...(data.hasBalcony ? ['Varanda'] : [])
-        ],
-        architecturalStyle: 'moderno_minimalista_brasileiro',
-        drawingStyle: 'isometric_3d' as const
+      const { lotWidth, lotDepth } = data;
+      const lines: string[] = [];
+      const addLine = (x1: number, y1: number, x2: number, y2: number, layer = 'PAREDES') => {
+        lines.push('0', 'LINE', '8', layer,
+          '10', x1.toFixed(3), '20', y1.toFixed(3), '30', '0.0',
+          '11', x2.toFixed(3), '21', y2.toFixed(3), '31', '0.0');
+      };
+      const addText = (x: number, y: number, text: string) => {
+        lines.push('0', 'TEXT', '8', 'TEXTOS',
+          '10', x.toFixed(3), '20', y.toFixed(3), '30', '0.0',
+          '40', '0.3', '1', text);
       };
 
-      const result = await aiService.generate3D(request);
-      
-      toast.dismiss(loadingToast);
-      
-      if (result.success) {
-        toast.success("Visualização 3D gerada com sucesso!", {
-          description: "Vista isométrica com pé direito de 2.5m"
-        });
-        
-        // Open 3D view in new tab or modal
-        if (result.imageUrl) {
-          window.open(result.imageUrl, '_blank');
-        }
-      } else {
-        toast.error("Erro na geração 3D", {
-          description: result.error || "Tente novamente em alguns momentos"
-        });
-      }
-    } catch (error) {
-      toast.dismiss(loadingToast);
-      toast.error("Erro na geração 3D", {
-        description: "Serviço temporariamente indisponível"
-      });
+      // Header DXF mínimo
+      const dxf: string[] = ['0', 'SECTION', '2', 'ENTITIES'];
+
+      // Contorno do terreno
+      addLine(0, 0, lotWidth, 0);
+      addLine(lotWidth, 0, lotWidth, lotDepth);
+      addLine(lotWidth, lotDepth, 0, lotDepth);
+      addLine(0, lotDepth, 0, 0);
+      addText(lotWidth / 2, -0.5, `Terreno ${lotWidth}m x ${lotDepth}m`);
+
+      // Caixa da casa (simplificada)
+      const bx = 1, by = 1, bw = lotWidth - 2, bh = lotDepth - 2;
+      addLine(bx, by, bx + bw, by);
+      addLine(bx + bw, by, bx + bw, by + bh);
+      addLine(bx + bw, by + bh, bx, by + bh);
+      addLine(bx, by + bh, bx, by);
+      addText(bx + bw / 2, by + bh / 2, `${data.totalArea}m2 - ${data.bedrooms}q/${data.bathrooms}b`);
+
+      dxf.push(...lines, '0', 'ENDSEC', '0', 'EOF');
+      const blob = new Blob([dxf.join('\n')], { type: 'application/dxf' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `planta-baixa-${data.totalArea}m2.dxf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success("Arquivo DXF baixado!", { description: "Compatível com AutoCAD e softwares CAD" });
+    } catch (e) {
+      toast.error("Erro ao gerar DXF");
     }
   };
 
