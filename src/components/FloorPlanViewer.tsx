@@ -58,6 +58,7 @@ export const FloorPlanViewer = ({ data, onExportPDF, onExportDWG }: FloorPlanVie
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [scale, setScale] = useState(28);
+  const [pattern, setPattern] = useState<LayoutPattern>('central_corridor');
   const [aiImageUrl, setAiImageUrl] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [view, setView] = useState<'schematic' | 'ai'>('schematic');
@@ -65,12 +66,28 @@ export const FloorPlanViewer = ({ data, onExportPDF, onExportDWG }: FloorPlanVie
   const [loading3D, setLoading3D] = useState(false);
   const [show3DDialog, setShow3DDialog] = useState(false);
 
-  const PAD = 70; // padding para cotas externas
+  const PAD = 70;
+  const PATTERNS: LayoutPattern[] = ['central_corridor', 'linear', 'L_shape', 'compact'];
 
   useEffect(() => {
-    const generated = generateLayout(data);
+    const generated = engineGenerateLayout({
+      totalArea: data.totalArea,
+      lotWidth: data.lotWidth,
+      lotDepth: data.lotDepth,
+      bedrooms: data.bedrooms,
+      bathrooms: data.bathrooms,
+      hasGarage: data.hasGarage,
+      hasBalcony: data.hasBalcony,
+    }, pattern);
     setRooms(generated);
-  }, [data]);
+  }, [data, pattern]);
+
+  const nbrIssues = validateNBR(rooms);
+
+  const cyclePattern = () => {
+    const idx = PATTERNS.indexOf(pattern);
+    setPattern(PATTERNS[(idx + 1) % PATTERNS.length]);
+  };
 
   useEffect(() => {
     if (rooms.length === 0) return;
