@@ -45,117 +45,14 @@ const ROOM_COLORS: Record<RoomType, string> = {
   garage: '#f3f4f6',
   balcony: '#cffafe',
   circulation: '#f9fafb',
+  office: '#ede9fe',
 };
 
 const ROOM_LABELS: Record<RoomType, string> = {
   bedroom: 'Quarto', suite: 'Suíte', bathroom: 'Banheiro', living: 'Sala/Cozinha',
-  kitchen: 'Cozinha', service: 'Serviço', garage: 'Garagem', balcony: 'Varanda', circulation: 'Circulação'
+  kitchen: 'Cozinha', service: 'Serviço', garage: 'Garagem', balcony: 'Varanda',
+  circulation: 'Circulação', office: 'Escritório',
 };
-
-/**
- * Layout generator: divide a casa em zona social (frente) e zona íntima (fundos),
- * com corredor central. Garagem ocupa lateral. Bem mais coerente que o anterior.
- */
-function generateLayout(data: FloorPlanData): Room[] {
-  const rooms: Room[] = [];
-  const M = 0.5; // recuo do terreno
-  const W = data.lotWidth - 2 * M;
-  const D = data.lotDepth - 2 * M;
-
-  // Garagem na lateral esquerda da frente, se habilitada
-  const garageW = data.hasGarage ? Math.min(3.2, W * 0.3) : 0;
-  if (data.hasGarage) {
-    rooms.push({
-      id: 'garage', name: 'Garagem', type: 'garage',
-      x: M, y: M, width: garageW, height: 5.5,
-      doors: [{ x: garageW / 2 - 1.25, y: 0, width: 2.5, wall: 'top', swing: 'out' }]
-    });
-  }
-
-  const houseX = M + garageW + (data.hasGarage ? 0.15 : 0);
-  const houseW = W - garageW - (data.hasGarage ? 0.15 : 0);
-  const houseY = M;
-  const houseD = D;
-
-  // Zona social (frente): sala + cozinha integradas + varanda opcional
-  const balconyD = data.hasBalcony ? 1.8 : 0;
-  if (data.hasBalcony) {
-    rooms.push({
-      id: 'balcony', name: 'Varanda', type: 'balcony',
-      x: houseX, y: houseY, width: houseW, height: balconyD
-    });
-  }
-
-  const socialY = houseY + balconyD + (data.hasBalcony ? 0.15 : 0);
-  const socialD = Math.max(4.5, houseD * 0.38);
-  rooms.push({
-    id: 'living', name: 'Sala / Cozinha', type: 'living',
-    x: houseX, y: socialY, width: houseW, height: socialD,
-    windows: [
-      { x: 0.5, y: 0, width: 2.0, type: 'normal', wall: 'top' },
-      { x: houseW - 2.5, y: 0, width: 1.5, type: 'normal', wall: 'top' }
-    ],
-    doors: [{ x: houseW / 2 - 0.45, y: 0, width: 0.9, wall: 'top', swing: 'in' }]
-  });
-
-  // Área de serviço
-  const serviceW = Math.min(2.5, houseW * 0.3);
-  const serviceD = 2.0;
-  rooms.push({
-    id: 'service', name: 'Serviço', type: 'service',
-    x: houseX + houseW - serviceW, y: socialY + socialD + 0.15,
-    width: serviceW, height: serviceD,
-    windows: [{ x: serviceW - 0.8, y: 0, width: 0.6, type: 'basculante', wall: 'right' }]
-  });
-
-  // Zona íntima (fundos): corredor + quartos + banheiros
-  const intimateY = socialY + socialD + 0.15;
-  const intimateD = houseD - intimateY + houseY;
-  const corridorH = 1.1;
-
-  rooms.push({
-    id: 'corridor', name: 'Circulação', type: 'circulation',
-    x: houseX, y: intimateY, width: houseW - serviceW - 0.15, height: corridorH,
-  });
-
-  // Quartos abaixo do corredor
-  const bedroomsY = intimateY + corridorH + 0.15;
-  const bedroomsD = intimateD - corridorH - 0.15;
-  const totalRooms = data.bedrooms;
-  const bathW = 1.8;
-  const availW = houseW - bathW - 0.15;
-  const bedW = availW / totalRooms;
-
-  for (let i = 0; i < totalRooms; i++) {
-    const isSuite = i === 0;
-    rooms.push({
-      id: `bed${i}`, name: isSuite ? 'Suíte' : `Quarto ${i + 1}`,
-      type: isSuite ? 'suite' : 'bedroom',
-      x: houseX + i * (bedW + (i > 0 ? 0.15 : 0)),
-      y: bedroomsY,
-      width: bedW - (i > 0 ? 0.15 : 0),
-      height: bedroomsD,
-      windows: [{ x: bedW / 2 - 0.6, y: bedroomsD - 0.05, width: 1.2, type: 'normal', wall: 'bottom' }],
-      doors: [{ x: bedW / 2 - 0.4, y: 0, width: 0.8, wall: 'top', swing: 'in' }]
-    });
-  }
-
-  // Banheiros à direita
-  const bathH = bedroomsD / Math.max(1, data.bathrooms);
-  for (let i = 0; i < data.bathrooms; i++) {
-    rooms.push({
-      id: `bath${i}`, name: i === 0 ? 'Banheiro' : `Banheiro ${i + 1}`, type: 'bathroom',
-      x: houseX + houseW - bathW,
-      y: bedroomsY + i * bathH,
-      width: bathW,
-      height: bathH - (i < data.bathrooms - 1 ? 0.15 : 0),
-      windows: [{ x: bathW - 0.7, y: 0, width: 0.6, type: 'basculante', wall: 'right' }],
-      doors: [{ x: 0, y: bathH / 2 - 0.35, width: 0.7, wall: 'left', swing: 'in' }]
-    });
-  }
-
-  return rooms;
-}
 
 export const FloorPlanViewer = ({ data, onExportPDF, onExportDWG }: FloorPlanViewerProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
