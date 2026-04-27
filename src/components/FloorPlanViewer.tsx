@@ -26,22 +26,8 @@ interface FloorPlanData {
   style: string;
 }
 
-type RoomType = 'bedroom' | 'suite' | 'bathroom' | 'living' | 'kitchen' | 'service' | 'garage' | 'balcony' | 'circulation';
-
-interface Window { x: number; y: number; width: number; type: 'normal' | 'basculante'; wall: 'top' | 'bottom' | 'left' | 'right'; }
-interface Door { x: number; y: number; width: number; wall: 'top' | 'bottom' | 'left' | 'right'; swing: 'in' | 'out'; }
-
-interface Room {
-  id: string;
-  name: string;
-  width: number;
-  height: number;
-  x: number;
-  y: number;
-  type: RoomType;
-  windows?: Window[];
-  doors?: Door[];
-}
+type RoomType = EngineRoomType;
+type Room = EngineRoom;
 
 interface FloorPlanViewerProps {
   data: FloorPlanData;
