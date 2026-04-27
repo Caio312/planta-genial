@@ -324,16 +324,43 @@ export const FloorPlanViewer = ({ data, onExportPDF, onExportDWG }: FloorPlanVie
             {data.totalArea}m² construídos · Terreno {data.lotWidth}×{data.lotDepth}m
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {view === 'schematic' && (
             <>
+              <Button variant="outline" size="sm" onClick={cyclePattern} title="Trocar padrão de layout">
+                <Shuffle className="w-4 h-4 mr-2" />{PATTERN_LABELS[pattern]}
+              </Button>
               <Button variant="outline" size="sm" onClick={() => setScale(s => Math.max(s * 0.85, 12))}><ZoomOut className="w-4 h-4" /></Button>
               <Button variant="outline" size="sm" onClick={() => setScale(s => Math.min(s * 1.15, 60))}><ZoomIn className="w-4 h-4" /></Button>
             </>
           )}
-          <Badge variant="secondary">1:100</Badge>
+          <Badge variant="secondary">1:100 · pé-direito 2,50m</Badge>
         </div>
       </div>
+
+      {view === 'schematic' && nbrIssues.length > 0 && (
+        <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/30">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+                  Validação NBR 15575 — {nbrIssues.length} aviso{nbrIssues.length > 1 ? 's' : ''}
+                </p>
+                <ul className="text-xs text-amber-800 dark:text-amber-300 space-y-0.5 list-disc list-inside">
+                  {nbrIssues.slice(0, 5).map((iss, i) => (
+                    <li key={i}>{iss.message}</li>
+                  ))}
+                  {nbrIssues.length > 5 && <li>+{nbrIssues.length - 5} outros…</li>}
+                </ul>
+                <p className="text-xs text-amber-700 dark:text-amber-400 mt-2">
+                  Tente outro padrão de layout ou aumente as dimensões do terreno.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="flex gap-2 flex-wrap">
         <Button
