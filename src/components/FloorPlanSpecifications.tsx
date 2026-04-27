@@ -70,52 +70,51 @@ export const FloorPlanSpecifications = ({ data, onBack, onStartNew }: FloorPlanS
     }
   };
 
-  const handleExportDWG = () => {
-    // Gera um arquivo DXF (compatível com AutoCAD/DWG) com as paredes e ambientes
+  const handleExportDWG = (rooms: any[]) => {
     try {
       const { lotWidth, lotDepth } = data;
-      const lines: string[] = [];
+      const ents: string[] = [];
       const addLine = (x1: number, y1: number, x2: number, y2: number, layer = 'PAREDES') => {
-        lines.push('0', 'LINE', '8', layer,
+        ents.push('0', 'LINE', '8', layer,
           '10', x1.toFixed(3), '20', y1.toFixed(3), '30', '0.0',
           '11', x2.toFixed(3), '21', y2.toFixed(3), '31', '0.0');
       };
-      const addText = (x: number, y: number, text: string) => {
-        lines.push('0', 'TEXT', '8', 'TEXTOS',
+      const addText = (x: number, y: number, text: string, height = 0.25) => {
+        ents.push('0', 'TEXT', '8', 'TEXTOS',
           '10', x.toFixed(3), '20', y.toFixed(3), '30', '0.0',
-          '40', '0.3', '1', text);
+          '40', height.toFixed(2), '1', text);
+      };
+      const addRect = (x: number, y: number, w: number, h: number, layer: string) => {
+        addLine(x, y, x + w, y, layer);
+        addLine(x + w, y, x + w, y + h, layer);
+        addLine(x + w, y + h, x, y + h, layer);
+        addLine(x, y + h, x, y, layer);
       };
 
-      // Header DXF mínimo
-      const dxf: string[] = ['0', 'SECTION', '2', 'ENTITIES'];
+      // Terreno
+      addRect(0, 0, lotWidth, lotDepth, 'TERRENO');
+      addText(lotWidth / 2 - 1, -0.6, `Terreno ${lotWidth}x${lotDepth}m`);
 
-      // Contorno do terreno
-      addLine(0, 0, lotWidth, 0);
-      addLine(lotWidth, 0, lotWidth, lotDepth);
-      addLine(lotWidth, lotDepth, 0, lotDepth);
-      addLine(0, lotDepth, 0, 0);
-      addText(lotWidth / 2, -0.5, `Terreno ${lotWidth}m x ${lotDepth}m`);
+      // Cada cômodo (eixo Y invertido para CAD - origem inferior)
+      rooms?.forEach(r => {
+        const yCAD = lotDepth - r.y - r.height;
+        addRect(r.x, yCAD, r.width, r.height, 'PAREDES');
+        addText(r.x + r.width / 2 - r.name.length * 0.1, yCAD + r.height / 2,
+          `${r.name} ${(r.width * r.height).toFixed(1)}m2`, 0.18);
+      });
 
-      // Caixa da casa (simplificada)
-      const bx = 1, by = 1, bw = lotWidth - 2, bh = lotDepth - 2;
-      addLine(bx, by, bx + bw, by);
-      addLine(bx + bw, by, bx + bw, by + bh);
-      addLine(bx + bw, by + bh, bx, by + bh);
-      addLine(bx, by + bh, bx, by);
-      addText(bx + bw / 2, by + bh / 2, `${data.totalArea}m2 - ${data.bedrooms}q/${data.bathrooms}b`);
-
-      dxf.push(...lines, '0', 'ENDSEC', '0', 'EOF');
-      const blob = new Blob([dxf.join('\n')], { type: 'application/dxf' });
+      const dxf = ['0', 'SECTION', '2', 'ENTITIES', ...ents, '0', 'ENDSEC', '0', 'EOF'].join('\n');
+      const blob = new Blob([dxf], { type: 'application/dxf' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `planta-baixa-${data.totalArea}m2.dxf`;
+      link.download = `planta-${data.totalArea}m2.dxf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      toast.success("Arquivo DXF baixado!", { description: "Compatível com AutoCAD e softwares CAD" });
-    } catch (e) {
+      toast.success("DXF baixado!", { description: "Abra no AutoCAD, LibreCAD ou QCAD" });
+    } catch {
       toast.error("Erro ao gerar DXF");
     }
   };
