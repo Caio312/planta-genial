@@ -3,9 +3,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Download, Eye, ZoomIn, ZoomOut, FileText, Box, Sparkles, Loader2, RefreshCw } from 'lucide-react';
+import { Download, Eye, ZoomIn, ZoomOut, FileText, Box, Sparkles, Loader2, RefreshCw, AlertTriangle, Shuffle } from 'lucide-react';
 import { toast } from 'sonner';
 import { aiService } from '@/services/aiService';
+import {
+  generateLayout as engineGenerateLayout,
+  validateNBR,
+  PATTERN_LABELS,
+  type LayoutPattern,
+  type Room as EngineRoom,
+  type RoomType as EngineRoomType,
+} from '@/services/layoutEngine';
 
 interface FloorPlanData {
   totalArea: number;
