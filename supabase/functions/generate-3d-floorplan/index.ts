@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt } = await req.json();
+    const { prompt, referenceImageUrl, quality = 'pro' } = await req.json();
     
     if (!prompt) {
       return new Response(
@@ -25,24 +25,34 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY não configurada');
     }
 
-    console.log('Gerando visualização 3D isométrica...');
+    // 3D usa Nano Banana Pro por padrão (melhor qualidade arquitetônica)
+    const model = quality === 'pro'
+      ? 'google/gemini-3-pro-image-preview'
+      : 'google/gemini-3.1-flash-image-preview';
 
-    // Prompt específico para 3D com ênfase em qualidade arquitetônica
+    console.log(`Gerando vista 3D isométrica com ${model}...`);
+
     const enhancedPrompt = `${prompt}
 
-ESPECIFICAÇÕES ADICIONAIS PARA VISTA 3D ISOMÉTRICA:
-- Vista isométrica com perspectiva de 45°
+ESPECIFICAÇÕES PARA VISTA 3D ISOMÉTRICA REALISTA:
+- Vista isométrica/axonométrica em ângulo de 45°, com paredes externas removidas (cutaway)
 - Pé direito de 2.50 metros em todos os ambientes
-- Telhado estilo brasileiro com telhas cerâmicas aparentes
-- Paredes externas com textura realista (reboco/pintura)
-- Janelas com vidros refletivos e caixilhos definidos
-- Portas com detalhamento realista
-- Pisos internos com textura diferenciada por ambiente
-- Iluminação natural simulada entrando pelas janelas
-- Sombras suaves projetadas pela construção
-- Vegetação paisagística externa (árvores, jardim)
-- Calçada e elementos externos básicos
-- Qualidade ultra-alta resolução para impressão`;
+- Mostrar mobiliário básico em cada cômodo (camas, sofá, mesa, fogão, vasos sanitários)
+- Telhado estilo brasileiro com telhas cerâmicas
+- Texturas realistas: pisos diferenciados por ambiente, paredes em cor clara
+- Iluminação natural suave entrando pelas janelas
+- Sombras suaves e realistas
+- Vegetação paisagística externa (jardim, árvores)
+- Calçada e elementos externos
+- Renderização arquitetônica profissional, alta qualidade
+- ${referenceImageUrl ? 'IMPORTANTE: Use a planta baixa 2D fornecida como referência exata para o layout dos cômodos' : ''}`;
+
+    const userContent: any = referenceImageUrl
+      ? [
+          { type: 'text', text: enhancedPrompt },
+          { type: 'image_url', image_url: { url: referenceImageUrl } }
+        ]
+      : enhancedPrompt;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -51,13 +61,8 @@ ESPECIFICAÇÕES ADICIONAIS PARA VISTA 3D ISOMÉTRICA:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-image-preview',
-        messages: [
-          {
-            role: 'user',
-            content: enhancedPrompt
-          }
-        ],
+        model,
+        messages: [{ role: 'user', content: userContent }],
         modalities: ['image', 'text']
       }),
     });
@@ -72,35 +77,27 @@ ESPECIFICAÇÕES ADICIONAIS PARA VISTA 3D ISOMÉTRICA:
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
       if (response.status === 402) {
         return new Response(
-          JSON.stringify({ error: 'Créditos insuficientes. Adicione créditos em Settings -> Usage.' }),
+          JSON.stringify({ error: 'Créditos de IA esgotados. Adicione créditos no workspace.' }),
           { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-
       throw new Error(`Erro da API de IA: ${response.status}`);
     }
 
     const data = await response.json();
-    
-    // Extrair a imagem gerada
     const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
     
     if (!imageUrl) {
-      console.error('Resposta da API:', JSON.stringify(data));
+      console.error('Resposta da API:', JSON.stringify(data).slice(0, 500));
       throw new Error('Nenhuma imagem 3D foi gerada');
     }
 
-    console.log('Vista 3D isométrica gerada com sucesso');
+    console.log('Vista 3D gerada com sucesso');
 
     return new Response(
-      JSON.stringify({ 
-        success: true,
-        imageUrl,
-        model: 'google/gemini-2.5-flash-image-preview'
-      }),
+      JSON.stringify({ success: true, imageUrl, model }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt } = await req.json();
+    const { prompt, quality = 'fast' } = await req.json();
     
     if (!prompt) {
       return new Response(
@@ -25,7 +25,25 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY não configurada');
     }
 
-    console.log('Gerando planta baixa 2D...');
+    // 'pro' usa Nano Banana Pro (melhor qualidade), 'fast' usa Nano Banana 2 (rápido + bom)
+    const model = quality === 'pro'
+      ? 'google/gemini-3-pro-image-preview'
+      : 'google/gemini-3.1-flash-image-preview';
+
+    console.log(`Gerando planta baixa 2D com ${model}...`);
+
+    const enhancedPrompt = `${prompt}
+
+REQUISITOS CRÍTICOS DA IMAGEM:
+- Vista superior estritamente ortogonal (top-down 2D), NÃO use perspectiva nem isométrico
+- Fundo branco puro, paredes em linhas pretas espessas (paredes externas mais grossas)
+- Cotas (dimensões em metros) marcadas nas paredes externas e em ambientes principais
+- Símbolos arquitetônicos NBR: portas com arco de abertura, janelas com linhas duplas
+- Texto legível em português: nome do ambiente + área em m² (ex: "SALA 25.5 m²")
+- Norte indicado com seta no canto superior direito
+- Escala 1:100 indicada
+- Estilo brasileiro contemporâneo minimalista
+- Imagem nítida, alta resolução, qualidade técnica de prancha arquitetônica`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -34,13 +52,8 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-image-preview',
-        messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
+        model,
+        messages: [{ role: 'user', content: enhancedPrompt }],
         modalities: ['image', 'text']
       }),
     });
@@ -55,35 +68,27 @@ serve(async (req) => {
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
       if (response.status === 402) {
         return new Response(
-          JSON.stringify({ error: 'Créditos insuficientes. Adicione créditos em Settings -> Usage.' }),
+          JSON.stringify({ error: 'Créditos de IA esgotados. Adicione créditos no workspace.' }),
           { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-
       throw new Error(`Erro da API de IA: ${response.status}`);
     }
 
     const data = await response.json();
-    
-    // Extrair a imagem gerada
     const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
     
     if (!imageUrl) {
-      console.error('Resposta da API:', JSON.stringify(data));
+      console.error('Resposta da API:', JSON.stringify(data).slice(0, 500));
       throw new Error('Nenhuma imagem foi gerada');
     }
 
     console.log('Planta baixa 2D gerada com sucesso');
 
     return new Response(
-      JSON.stringify({ 
-        success: true,
-        imageUrl,
-        model: 'google/gemini-2.5-flash-image-preview'
-      }),
+      JSON.stringify({ success: true, imageUrl, model }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
