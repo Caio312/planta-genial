@@ -307,7 +307,17 @@ export const FloorPlanViewer = ({ data, onExportPDF, onExportDWG }: FloorPlanVie
     setShow3DDialog(true);
     const t = toast.loading('Gerando vista 3D...');
     try {
-      const result = await aiService.generate3D(buildAIRequest(), aiImageUrl || undefined);
+      // Garante que existe a planta esquemática IA como referência
+      let refUrl = aiImageUrl;
+      if (!refUrl) {
+        toast.message('Gerando planta esquemática de referência...');
+        const ref = await aiService.generateFloorPlan(buildAIRequest(), 'fast');
+        if (ref.success && ref.imageUrl) {
+          refUrl = ref.imageUrl;
+          setAiImageUrl(ref.imageUrl);
+        }
+      }
+      const result = await aiService.generate3D(buildAIRequest(), refUrl || undefined);
       toast.dismiss(t);
       if (result.success && result.imageUrl) {
         setImage3D(result.imageUrl);
