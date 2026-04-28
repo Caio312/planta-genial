@@ -453,6 +453,56 @@ export const FloorPlanViewer = ({ data, onExportPDF, onExportDWG }: FloorPlanVie
         </CardContent>
       </Card>
 
+      {/* Validação por ambiente: entradas/saídas, janelas, área */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center text-base">
+            <DoorOpen className="w-4 h-4 mr-2" />Validação dos Ambientes
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-text-secondary border-b border-border">
+                  <th className="py-2 pr-3 font-medium">Ambiente</th>
+                  <th className="py-2 pr-3 font-medium">Área</th>
+                  <th className="py-2 pr-3 font-medium">Portas</th>
+                  <th className="py-2 pr-3 font-medium">Janelas</th>
+                  <th className="py-2 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {roomStats.map((s, i) => {
+                  const needsDoor = ['bedroom','suite','bathroom','kitchen','office','service'].includes(s.type);
+                  const needsWin = ['bedroom','suite','living','kitchen','office'].includes(s.type);
+                  const ok = (!needsDoor || s.doors > 0) && (!needsWin || s.windows > 0);
+                  return (
+                    <tr key={i} className="border-b border-border/50 last:border-0">
+                      <td className="py-2 pr-3 font-medium text-foreground">{s.name}</td>
+                      <td className="py-2 pr-3 text-text-secondary">{s.area.toFixed(1)} m²</td>
+                      <td className="py-2 pr-3 text-text-secondary">{s.doors}</td>
+                      <td className="py-2 pr-3 text-text-secondary">{s.windows}</td>
+                      <td className="py-2">
+                        {ok ? (
+                          <span className="inline-flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-400">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> OK
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400">
+                            <AlertTriangle className="w-3.5 h-3.5" /> Verificar
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center text-base"><Eye className="w-4 h-4 mr-2" />Legenda</CardTitle>
