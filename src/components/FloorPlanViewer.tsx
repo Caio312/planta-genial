@@ -279,24 +279,24 @@ export const FloorPlanViewer = ({ data, onExportPDF, onExportDWG }: FloorPlanVie
     drawingStyle: 'technical_2d' as const
   });
 
-  const handleGenerateAI = async (quality: 'fast' | 'pro' = 'fast') => {
+  const handleGenerateAI = async (quality: 'fast' | 'pro' = 'fast', silent = false) => {
     setAiLoading(true);
-    setView('ai');
-    const t = toast.loading(quality === 'pro' ? 'Gerando planta Pro...' : 'Gerando planta com IA...');
+    if (!silent) setView('ai');
+    const t = silent ? null : toast.loading(quality === 'pro' ? 'Gerando planta Pro...' : 'Gerando planta com IA...');
     try {
       const result = await aiService.generateFloorPlan(buildAIRequest(), quality);
-      toast.dismiss(t);
+      if (t) toast.dismiss(t);
       if (result.success && result.imageUrl) {
         setAiImageUrl(result.imageUrl);
-        toast.success('Planta gerada!');
+        if (!silent) toast.success('Planta gerada!');
       } else {
-        toast.error('Erro ao gerar', { description: result.error });
-        setView('schematic');
+        if (!silent) toast.error('Erro ao gerar', { description: result.error });
+        if (!silent) setView('schematic');
       }
     } catch {
-      toast.dismiss(t);
-      toast.error('Erro inesperado');
-      setView('schematic');
+      if (t) toast.dismiss(t);
+      if (!silent) toast.error('Erro inesperado');
+      if (!silent) setView('schematic');
     } finally {
       setAiLoading(false);
     }
