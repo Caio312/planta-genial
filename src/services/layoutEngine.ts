@@ -185,6 +185,7 @@ function layoutCentralCorridor(d: LayoutInput): Room[] {
     x: houseX + houseW - serviceW, y: socialY + socialD + 0.15,
     width: serviceW, height: serviceD,
     windows: [{ x: serviceW - 0.8, y: 0, width: 0.6, type: 'basculante', wall: 'right' }],
+    doors: [{ x: serviceW / 2 - 0.35, y: 0, width: 0.7, wall: 'top', swing: 'in' }],
   });
 
   const intimateY = socialY + socialD + 0.15;
@@ -259,9 +260,12 @@ function layoutLinear(d: LayoutInput): Room[] {
     doors: [{ x: houseW / 2 - 0.45, y: 0, width: 0.9, wall: 'top', swing: 'in' }],
   });
 
+  const kitchenW = houseW * 0.6 - 0.075;
   rooms.push({
     id: 'kitchen', name: 'Cozinha', type: 'kitchen',
-    x: houseX, y: socialY + livingD + 0.15, width: houseW * 0.6 - 0.075, height: kitchenD,
+    x: houseX, y: socialY + livingD + 0.15, width: kitchenW, height: kitchenD,
+    windows: [{ x: 0.4, y: 0, width: 1.0, type: 'normal', wall: 'top' }],
+    doors: [{ x: kitchenW / 2 - 0.4, y: 0, width: 0.8, wall: 'bottom', swing: 'in' }],
   });
   rooms.push({
     id: 'service', name: 'Serviço', type: 'service',
@@ -406,10 +410,26 @@ function layoutCompact(d: LayoutInput): Room[] {
     ));
   }
 
-  // Banheiros adicionais (se houver mais de 1)
-  for (let i = 1; i < d.bathrooms; i++) {
-    // anexa à direita do último quarto
-    // (simplificado — em layouts compactos o ideal é 1 banheiro)
+  // Banheiros adicionais anexados lateralmente ao último quarto
+  if (d.bathrooms > 1) {
+    const extraBathW = Math.min(1.8, houseW * 0.22);
+    const extraBathH = bedD / (d.bathrooms - 1);
+    const lastBedX = houseX + (d.bedrooms - 1) * bedW;
+    // Reduz a largura do último quarto para acomodar banheiros adicionais
+    const lastBed = rooms.find(r => r.id === `bed${d.bedrooms - 1}`);
+    if (lastBed) {
+      lastBed.width = Math.max(2.0, lastBed.width - extraBathW - 0.15);
+    }
+    for (let i = 1; i < d.bathrooms; i++) {
+      rooms.push(makeBathroom(
+        i,
+        lastBedX + (lastBed ? lastBed.width : bedW) + 0.15,
+        bedY + (i - 1) * extraBathH,
+        extraBathW,
+        extraBathH - (i < d.bathrooms - 1 ? 0.15 : 0),
+        'left'
+      ));
+    }
   }
   return rooms;
 }

@@ -19,6 +19,7 @@ interface FloorPlanData {
   lotWidth: number;
   lotDepth: number;
   bedrooms: number;
+  suites: number;
   bathrooms: number;
   hasGarage: boolean;
   hasBalcony: boolean;
@@ -53,7 +54,7 @@ export const FloorPlanSpecifications = ({ data, onBack, onStartNew }: FloorPlanS
           lotWidth: data.lotWidth,
           lotDepth: data.lotDepth,
           bedrooms: data.bedrooms,
-          suites: 1,
+          suites: data.suites,
           bathrooms: data.bathrooms,
           additionalSpaces: [
             ...(data.hasGarage ? ['Garagem'] : []),
@@ -232,20 +233,17 @@ export const FloorPlanSpecifications = ({ data, onBack, onStartNew }: FloorPlanS
                       </div>
                       
                       <div>
-                        <h4 className="font-semibold text-foreground mb-3">Conformidade Técnica</h4>
+                        <h4 className="font-semibold text-foreground mb-3">Normas de Referência</h4>
                         <div className="space-y-2">
-                          <Badge variant="secondary" className="bg-success-light text-success">
-                            ✓ NBR 9050 - Acessibilidade
+                          <Badge variant="secondary">
+                            NBR 15575 — Áreas mínimas validadas
                           </Badge>
-                          <Badge variant="secondary" className="bg-success-light text-success">
-                            ✓ Código de Obras Municipal  
+                          <Badge variant="secondary">
+                            NBR 6492 — Simbologia arquitetônica
                           </Badge>
-                          <Badge variant="secondary" className="bg-success-light text-success">
-                            ✓ Normas de Ventilação
-                          </Badge>
-                          <Badge variant="secondary" className="bg-success-light text-success">
-                            ✓ Iluminação Natural
-                          </Badge>
+                          <p className="text-xs text-text-secondary pt-1">
+                            Conformidade final depende de revisão por arquiteto habilitado (CAU) e aprovação municipal.
+                          </p>
                         </div>
                       </div>
                     </div>
