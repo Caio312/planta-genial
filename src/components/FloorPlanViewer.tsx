@@ -100,14 +100,8 @@ export const FloorPlanViewer = ({ data, onExportPDF, onExportDWG }: FloorPlanVie
     setPattern(PATTERNS[(idx + 1) % PATTERNS.length]);
   };
 
-  // Auto-gerar planta esquemática com IA ao montar (usando os parâmetros)
+  // Auto-gerar planta esquemática com IA ao montar (definido após handleGenerateAI abaixo)
   const autoGenRef = useRef(false);
-  useEffect(() => {
-    if (autoGenRef.current) return;
-    autoGenRef.current = true;
-    handleGenerateAI('fast', true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   useEffect(() => {
     if (rooms.length === 0) return;
@@ -302,6 +296,13 @@ export const FloorPlanViewer = ({ data, onExportPDF, onExportDWG }: FloorPlanVie
     }
   };
 
+  // Auto-gerar planta IA na primeira montagem
+  useEffect(() => {
+    if (autoGenRef.current) return;
+    autoGenRef.current = true;
+    handleGenerateAI('fast', true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const handleGenerate3D = async () => {
     setLoading3D(true);
     setShow3DDialog(true);
