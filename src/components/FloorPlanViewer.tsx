@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Download, Eye, ZoomIn, ZoomOut, FileText, Box, Sparkles, Loader2, RefreshCw, AlertTriangle, Shuffle } from 'lucide-react';
+import { Download, Eye, ZoomIn, ZoomOut, FileText, Box, Sparkles, Loader2, RefreshCw, AlertTriangle, Shuffle, CheckCircle2, DoorOpen, Square } from 'lucide-react';
 import { toast } from 'sonner';
 import { aiService } from '@/services/aiService';
 import {
@@ -83,11 +83,31 @@ export const FloorPlanViewer = ({ data, onExportPDF, onExportDWG }: FloorPlanVie
   }, [data, pattern]);
 
   const nbrIssues = validateNBR(rooms);
+  const errors = nbrIssues.filter(i => i.level === 'error');
+  const warns = nbrIssues.filter(i => i.level === 'warn');
+
+  // Estatísticas dos ambientes (entradas/saídas, janelas, áreas)
+  const roomStats = rooms.map(r => ({
+    name: r.name,
+    area: r.width * r.height,
+    doors: r.doors?.length || 0,
+    windows: r.windows?.length || 0,
+    type: r.type,
+  }));
 
   const cyclePattern = () => {
     const idx = PATTERNS.indexOf(pattern);
     setPattern(PATTERNS[(idx + 1) % PATTERNS.length]);
   };
+
+  // Auto-gerar planta esquemática com IA ao montar (usando os parâmetros)
+  const autoGenRef = useRef(false);
+  useEffect(() => {
+    if (autoGenRef.current) return;
+    autoGenRef.current = true;
+    handleGenerateAI('fast', true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (rooms.length === 0) return;
