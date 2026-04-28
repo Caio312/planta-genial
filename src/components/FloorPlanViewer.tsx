@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Download, Eye, ZoomIn, ZoomOut, FileText, Box, Sparkles, Loader2, RefreshCw, AlertTriangle, Shuffle } from 'lucide-react';
+import { Download, Eye, ZoomIn, ZoomOut, FileText, Box, Sparkles, Loader2, RefreshCw, AlertTriangle, Shuffle, CheckCircle2, DoorOpen, Square } from 'lucide-react';
 import { toast } from 'sonner';
 import { aiService } from '@/services/aiService';
 import {
@@ -83,11 +83,31 @@ export const FloorPlanViewer = ({ data, onExportPDF, onExportDWG }: FloorPlanVie
   }, [data, pattern]);
 
   const nbrIssues = validateNBR(rooms);
+  const errors = nbrIssues.filter(i => i.level === 'error');
+  const warns = nbrIssues.filter(i => i.level === 'warn');
+
+  // Estatísticas dos ambientes (entradas/saídas, janelas, áreas)
+  const roomStats = rooms.map(r => ({
+    name: r.name,
+    area: r.width * r.height,
+    doors: r.doors?.length || 0,
+    windows: r.windows?.length || 0,
+    type: r.type,
+  }));
 
   const cyclePattern = () => {
     const idx = PATTERNS.indexOf(pattern);
     setPattern(PATTERNS[(idx + 1) % PATTERNS.length]);
   };
+
+  // Auto-gerar planta esquemática com IA ao montar (usando os parâmetros)
+  const autoGenRef = useRef(false);
+  useEffect(() => {
+    if (autoGenRef.current) return;
+    autoGenRef.current = true;
+    handleGenerateAI('fast', true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (rooms.length === 0) return;
@@ -259,24 +279,24 @@ export const FloorPlanViewer = ({ data, onExportPDF, onExportDWG }: FloorPlanVie
     drawingStyle: 'technical_2d' as const
   });
 
-  const handleGenerateAI = async (quality: 'fast' | 'pro' = 'fast') => {
+  const handleGenerateAI = async (quality: 'fast' | 'pro' = 'fast', silent = false) => {
     setAiLoading(true);
-    setView('ai');
-    const t = toast.loading(quality === 'pro' ? 'Gerando planta Pro...' : 'Gerando planta com IA...');
+    if (!silent) setView('ai');
+    const t = silent ? null : toast.loading(quality === 'pro' ? 'Gerando planta Pro...' : 'Gerando planta com IA...');
     try {
       const result = await aiService.generateFloorPlan(buildAIRequest(), quality);
-      toast.dismiss(t);
+      if (t) toast.dismiss(t);
       if (result.success && result.imageUrl) {
         setAiImageUrl(result.imageUrl);
-        toast.success('Planta gerada!');
+        if (!silent) toast.success('Planta gerada!');
       } else {
-        toast.error('Erro ao gerar', { description: result.error });
-        setView('schematic');
+        if (!silent) toast.error('Erro ao gerar', { description: result.error });
+        if (!silent) setView('schematic');
       }
     } catch {
-      toast.dismiss(t);
-      toast.error('Erro inesperado');
-      setView('schematic');
+      if (t) toast.dismiss(t);
+      if (!silent) toast.error('Erro inesperado');
+      if (!silent) setView('schematic');
     } finally {
       setAiLoading(false);
     }
@@ -287,7 +307,17 @@ export const FloorPlanViewer = ({ data, onExportPDF, onExportDWG }: FloorPlanVie
     setShow3DDialog(true);
     const t = toast.loading('Gerando vista 3D...');
     try {
-      const result = await aiService.generate3D(buildAIRequest(), aiImageUrl || undefined);
+      // Garante que existe a planta esquemática IA como referência
+      let refUrl = aiImageUrl;
+      if (!refUrl) {
+        toast.message('Gerando planta esquemática de referência...');
+        const ref = await aiService.generateFloorPlan(buildAIRequest(), 'fast');
+        if (ref.success && ref.imageUrl) {
+          refUrl = ref.imageUrl;
+          setAiImageUrl(ref.imageUrl);
+        }
+      }
+      const result = await aiService.generate3D(buildAIRequest(), refUrl || undefined);
       toast.dismiss(t);
       if (result.success && result.imageUrl) {
         setImage3D(result.imageUrl);
@@ -338,24 +368,38 @@ export const FloorPlanViewer = ({ data, onExportPDF, onExportDWG }: FloorPlanVie
         </div>
       </div>
 
-      {view === 'schematic' && nbrIssues.length > 0 && (
-        <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/30">
+      {view === 'schematic' && (
+        <Card className={
+          errors.length > 0 ? 'border-destructive/50 bg-destructive/5' :
+          warns.length > 0 ? 'border-amber-300 bg-amber-50 dark:bg-amber-950/30' :
+          'border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30'
+        }>
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
-                  Validação NBR 15575 — {nbrIssues.length} aviso{nbrIssues.length > 1 ? 's' : ''}
+              {errors.length === 0 && warns.length === 0 ? (
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
+              ) : (
+                <AlertTriangle className={`w-5 h-5 mt-0.5 flex-shrink-0 ${errors.length > 0 ? 'text-destructive' : 'text-amber-600'}`} />
+              )}
+              <div className="space-y-1 flex-1">
+                <p className="text-sm font-medium">
+                  {errors.length === 0 && warns.length === 0
+                    ? 'Validação NBR 15575 — Projeto em conformidade ✓'
+                    : `Validação NBR 15575 — ${errors.length} erro${errors.length !== 1 ? 's' : ''}, ${warns.length} aviso${warns.length !== 1 ? 's' : ''}`}
                 </p>
-                <ul className="text-xs text-amber-800 dark:text-amber-300 space-y-0.5 list-disc list-inside">
-                  {nbrIssues.slice(0, 5).map((iss, i) => (
-                    <li key={i}>{iss.message}</li>
-                  ))}
-                  {nbrIssues.length > 5 && <li>+{nbrIssues.length - 5} outros…</li>}
-                </ul>
-                <p className="text-xs text-amber-700 dark:text-amber-400 mt-2">
-                  Tente outro padrão de layout ou aumente as dimensões do terreno.
-                </p>
+                {nbrIssues.length > 0 && (
+                  <ul className="text-xs space-y-0.5 list-disc list-inside opacity-90">
+                    {nbrIssues.slice(0, 6).map((iss, i) => (
+                      <li key={i}>{iss.message}</li>
+                    ))}
+                    {nbrIssues.length > 6 && <li>+{nbrIssues.length - 6} outros…</li>}
+                  </ul>
+                )}
+                {errors.length > 0 && (
+                  <p className="text-xs mt-2 opacity-80">
+                    Tente outro padrão de layout ou aumente as dimensões do terreno.
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>
@@ -416,6 +460,56 @@ export const FloorPlanViewer = ({ data, onExportPDF, onExportDWG }: FloorPlanVie
               )}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Validação por ambiente: entradas/saídas, janelas, área */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center text-base">
+            <DoorOpen className="w-4 h-4 mr-2" />Validação dos Ambientes
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-text-secondary border-b border-border">
+                  <th className="py-2 pr-3 font-medium">Ambiente</th>
+                  <th className="py-2 pr-3 font-medium">Área</th>
+                  <th className="py-2 pr-3 font-medium">Portas</th>
+                  <th className="py-2 pr-3 font-medium">Janelas</th>
+                  <th className="py-2 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {roomStats.map((s, i) => {
+                  const needsDoor = ['bedroom','suite','bathroom','kitchen','office','service'].includes(s.type);
+                  const needsWin = ['bedroom','suite','living','kitchen','office'].includes(s.type);
+                  const ok = (!needsDoor || s.doors > 0) && (!needsWin || s.windows > 0);
+                  return (
+                    <tr key={i} className="border-b border-border/50 last:border-0">
+                      <td className="py-2 pr-3 font-medium text-foreground">{s.name}</td>
+                      <td className="py-2 pr-3 text-text-secondary">{s.area.toFixed(1)} m²</td>
+                      <td className="py-2 pr-3 text-text-secondary">{s.doors}</td>
+                      <td className="py-2 pr-3 text-text-secondary">{s.windows}</td>
+                      <td className="py-2">
+                        {ok ? (
+                          <span className="inline-flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-400">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> OK
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400">
+                            <AlertTriangle className="w-3.5 h-3.5" /> Verificar
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
 

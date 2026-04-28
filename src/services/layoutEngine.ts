@@ -78,7 +78,6 @@ export function validateNBR(rooms: Room[]): NBRIssue[] {
         message: `${r.name}: ${area.toFixed(1)} m² abaixo do mínimo NBR (${min} m²)`,
       });
     }
-    // Largura mínima de cômodos habitáveis: 2,0 m
     if ((r.type === 'bedroom' || r.type === 'suite' || r.type === 'living' || r.type === 'office')
         && Math.min(r.width, r.height) < 2.0) {
       issues.push({
@@ -92,7 +91,27 @@ export function validateNBR(rooms: Room[]): NBRIssue[] {
         message: `${r.name}: largura de circulação inferior a 0,80 m`,
       });
     }
+    // Validação de saídas/entradas: todo ambiente habitável precisa de porta
+    const needsDoor: RoomType[] = ['bedroom', 'suite', 'bathroom', 'kitchen', 'office', 'service'];
+    if (needsDoor.includes(r.type) && (!r.doors || r.doors.length === 0)) {
+      issues.push({
+        level: 'error',
+        message: `${r.name}: sem porta de acesso (entrada/saída ausente)`,
+      });
+    }
+    // Ambientes habitáveis precisam de janela (ventilação NBR 15575)
+    const needsWindow: RoomType[] = ['bedroom', 'suite', 'living', 'kitchen', 'office'];
+    if (needsWindow.includes(r.type) && (!r.windows || r.windows.length === 0)) {
+      issues.push({
+        level: 'warn',
+        message: `${r.name}: sem janela (ventilação/iluminação natural insuficiente)`,
+      });
+    }
   });
+  // Sala precisa existir (entrada principal)
+  if (!rooms.some(r => r.type === 'living')) {
+    issues.push({ level: 'error', message: 'Projeto sem sala de estar (acesso principal)' });
+  }
   return issues;
 }
 
