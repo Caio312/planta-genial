@@ -20,6 +20,7 @@ interface FloorPlanData {
   lotWidth: number;
   lotDepth: number;
   bedrooms: number;
+  suites: number;
   bathrooms: number;
   hasGarage: boolean;
   hasBalcony: boolean;
@@ -60,8 +61,8 @@ export const FloorPlanViewer = ({ data, onExportPDF, onExportDWG }: FloorPlanVie
   const [scale, setScale] = useState(28);
   const [pattern, setPattern] = useState<LayoutPattern>('central_corridor');
   const [aiImageUrl, setAiImageUrl] = useState<string | null>(null);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [view, setView] = useState<'schematic' | 'ai'>('schematic');
+  const [aiLoading, setAiLoading] = useState(true);
+  const [view, setView] = useState<'schematic' | 'ai'>('ai');
   const [image3D, setImage3D] = useState<string | null>(null);
   const [loading3D, setLoading3D] = useState(false);
   const [show3DDialog, setShow3DDialog] = useState(false);
@@ -262,7 +263,7 @@ export const FloorPlanViewer = ({ data, onExportPDF, onExportDWG }: FloorPlanVie
     lotWidth: data.lotWidth,
     lotDepth: data.lotDepth,
     bedrooms: data.bedrooms,
-    suites: 1,
+    suites: data.suites,
     bathrooms: data.bathrooms,
     livingStyle: 'integrated' as const,
     additionalSpaces: [
@@ -273,24 +274,22 @@ export const FloorPlanViewer = ({ data, onExportPDF, onExportDWG }: FloorPlanVie
     drawingStyle: 'technical_2d' as const
   });
 
-  const handleGenerateAI = async (quality: 'fast' | 'pro' = 'fast', silent = false) => {
+  const handleGenerateAI = async (quality: 'fast' | 'pro' = 'fast') => {
     setAiLoading(true);
-    if (!silent) setView('ai');
-    const t = silent ? null : toast.loading(quality === 'pro' ? 'Gerando planta Pro...' : 'Gerando planta com IA...');
+    setView('ai');
+    const t = toast.loading(quality === 'pro' ? 'Gerando planta Pro...' : 'Gerando planta com IA...');
     try {
       const result = await aiService.generateFloorPlan(buildAIRequest(), quality);
-      if (t) toast.dismiss(t);
+      toast.dismiss(t);
       if (result.success && result.imageUrl) {
         setAiImageUrl(result.imageUrl);
-        if (!silent) toast.success('Planta gerada!');
+        toast.success('Planta gerada!');
       } else {
-        if (!silent) toast.error('Erro ao gerar', { description: result.error });
-        if (!silent) setView('schematic');
+        toast.error('Erro ao gerar', { description: result.error });
       }
     } catch {
-      if (t) toast.dismiss(t);
-      if (!silent) toast.error('Erro inesperado');
-      if (!silent) setView('schematic');
+      toast.dismiss(t);
+      toast.error('Erro inesperado');
     } finally {
       setAiLoading(false);
     }
@@ -300,7 +299,7 @@ export const FloorPlanViewer = ({ data, onExportPDF, onExportDWG }: FloorPlanVie
   useEffect(() => {
     if (autoGenRef.current) return;
     autoGenRef.current = true;
-    handleGenerateAI('fast', true);
+    handleGenerateAI('fast');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const handleGenerate3D = async () => {
@@ -422,7 +421,7 @@ export const FloorPlanViewer = ({ data, onExportPDF, onExportDWG }: FloorPlanVie
           disabled={aiLoading}
         >
           <Sparkles className="w-4 h-4 mr-2" />
-          Vista Renderizada (IA)
+          {aiLoading && view === 'ai' ? 'Gerando...' : 'Vista Renderizada (IA)'}
         </Button>
         {view === 'ai' && aiImageUrl && (
           <>

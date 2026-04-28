@@ -1,5 +1,4 @@
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 
 export interface PDFGenerationOptions {
   projectName: string;
@@ -220,11 +219,16 @@ class PDFService {
       yPosition += 6;
     });
 
-    // Footer
-    pdf.setFontSize(8);
-    pdf.setTextColor(120, 120, 120);
-    pdf.text(`Gerado automaticamente em ${new Date().toLocaleDateString('pt-BR')}`, margin, pageHeight - 15);
-    pdf.text('Página 1 de 1', pageWidth - margin - 20, pageHeight - 15);
+    // Footer em todas as páginas
+    const totalPages = pdf.getNumberOfPages();
+    const footerDate = new Date().toLocaleDateString('pt-BR');
+    for (let p = 1; p <= totalPages; p++) {
+      pdf.setPage(p);
+      pdf.setFontSize(8);
+      pdf.setTextColor(120, 120, 120);
+      pdf.text(`Gerado automaticamente em ${footerDate}`, margin, pageHeight - 15);
+      pdf.text(`Página ${p} de ${totalPages}`, pageWidth - margin - 20, pageHeight - 15);
+    }
 
     return pdf.output('blob');
   }
