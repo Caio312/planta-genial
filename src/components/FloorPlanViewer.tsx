@@ -358,24 +358,38 @@ export const FloorPlanViewer = ({ data, onExportPDF, onExportDWG }: FloorPlanVie
         </div>
       </div>
 
-      {view === 'schematic' && nbrIssues.length > 0 && (
-        <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/30">
+      {view === 'schematic' && (
+        <Card className={
+          errors.length > 0 ? 'border-destructive/50 bg-destructive/5' :
+          warns.length > 0 ? 'border-amber-300 bg-amber-50 dark:bg-amber-950/30' :
+          'border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30'
+        }>
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
-                  Validação NBR 15575 — {nbrIssues.length} aviso{nbrIssues.length > 1 ? 's' : ''}
+              {errors.length === 0 && warns.length === 0 ? (
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
+              ) : (
+                <AlertTriangle className={`w-5 h-5 mt-0.5 flex-shrink-0 ${errors.length > 0 ? 'text-destructive' : 'text-amber-600'}`} />
+              )}
+              <div className="space-y-1 flex-1">
+                <p className="text-sm font-medium">
+                  {errors.length === 0 && warns.length === 0
+                    ? 'Validação NBR 15575 — Projeto em conformidade ✓'
+                    : `Validação NBR 15575 — ${errors.length} erro${errors.length !== 1 ? 's' : ''}, ${warns.length} aviso${warns.length !== 1 ? 's' : ''}`}
                 </p>
-                <ul className="text-xs text-amber-800 dark:text-amber-300 space-y-0.5 list-disc list-inside">
-                  {nbrIssues.slice(0, 5).map((iss, i) => (
-                    <li key={i}>{iss.message}</li>
-                  ))}
-                  {nbrIssues.length > 5 && <li>+{nbrIssues.length - 5} outros…</li>}
-                </ul>
-                <p className="text-xs text-amber-700 dark:text-amber-400 mt-2">
-                  Tente outro padrão de layout ou aumente as dimensões do terreno.
-                </p>
+                {nbrIssues.length > 0 && (
+                  <ul className="text-xs space-y-0.5 list-disc list-inside opacity-90">
+                    {nbrIssues.slice(0, 6).map((iss, i) => (
+                      <li key={i}>{iss.message}</li>
+                    ))}
+                    {nbrIssues.length > 6 && <li>+{nbrIssues.length - 6} outros…</li>}
+                  </ul>
+                )}
+                {errors.length > 0 && (
+                  <p className="text-xs mt-2 opacity-80">
+                    Tente outro padrão de layout ou aumente as dimensões do terreno.
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>
