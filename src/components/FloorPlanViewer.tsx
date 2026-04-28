@@ -296,6 +296,13 @@ export const FloorPlanViewer = ({ data, onExportPDF, onExportDWG }: FloorPlanVie
     }
   };
 
+  // Auto-gerar planta IA na primeira montagem
+  useEffect(() => {
+    if (autoGenRef.current) return;
+    autoGenRef.current = true;
+    handleGenerateAI('fast', true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const handleGenerate3D = async () => {
     setLoading3D(true);
     setShow3DDialog(true);
